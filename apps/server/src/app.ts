@@ -53,12 +53,16 @@ export function createApp(options: AppOptions = {}): Express {
   // Upload route first: it reads the raw file body itself (not JSON).
   app.use(
     '/api',
-    createParseRouter({ registry, extractText: options.extractText ?? realExtractText }),
+    createParseRouter({
+      registry,
+      extractText: options.extractText ?? realExtractText,
+      logger,
+    }),
   );
 
   app.use(express.json({ limit: JSON_BODY_LIMIT }));
   app.use('/api', healthRouter);
-  app.use('/api', createKeyTestRouter(registry));
+  app.use('/api', createKeyTestRouter(registry, logger));
   app.use(
     '/api',
     createRenderRouter({

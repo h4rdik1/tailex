@@ -183,7 +183,9 @@ Short ADRs. Format: **Context · Options · Choice · Tradeoffs.** New decisions
 - **Context:** Rule 7: check the official docs, not memory. Read on 2026-11-20 at aistudio.google.com/docs (ai.google.dev now redirects there).
 - **Choice:** `fetch` against `POST https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent` with `systemInstruction`, `generationConfig.responseMimeType = "application/json"` and `responseJsonSchema` (generated from the same Zod schema with `z.toJSONSchema`). The key goes in the **`x-goog-api-key` header**, never the URL. Key check: `GET /v1beta/models?pageSize=1` (no tokens). No SDK.
 - **Why this model:** labelled Stable, described as the fastest and most cost-effective 3.5 model, and named by Google for new projects. `gemini-2.5-flash` is being auto-routed to it from 2026-12-01.
-- **Not confirmed in the docs (verify with a real key before launch):** free-tier availability and limits for this model; the exact status code for an invalid key (we map 400/401/403 to `KEY_INVALID`, so a malformed request of ours would also show as "key rejected"); the error JSON shape; whether `x-goog-api-key` is accepted on the models-list endpoint; the free-tier data-use rule (the UI note stays cautious: "may use prompts").
+- **Confirmed by a real call (2026-11-20, owner's key, fictional resume):** `x-goog-api-key` works on both the models list and generateContent; `gemini-3.5-flash-lite` answers with `finishReason: STOP` and JSON text at `candidates[0].content.parts[0].text`; errors use the standard Google shape `{ error: { code, message, status, details } }`. A full parse used ~583 tokens. The response also contained a `thoughtSignature` (ignored).
+- **Corrected after the real call:** a plain `400` was being reported as "key rejected", but it was **our** schema (see ADR-031). Now only 401/403 or reason `API_KEY_INVALID`/`API_KEY_EXPIRED` mean `KEY_INVALID`; any other 4xx is `LLM_REQUEST_REJECTED` (502, "problem on our side"), and the server logs Google's short `status`/`reason` codes (never its message text).
+- **Still not confirmed:** free-tier limits for this model and the free-tier data-use rule (the UI note stays cautious: "may use prompts").
 - **Tradeoffs:** We maintain ~100 lines of adapter instead of an SDK, but we see every byte that's sent, and the host is a constant (SSRF).
 
 ## ADR-028 — A 30-line logger instead of pino
@@ -204,6 +206,14 @@ Short ADRs. Format: **Context · Options · Choice · Tradeoffs.** New decisions
 
 - **Choice:** Regexes for emails, URLs (incl. bare `linkedin.com/in/…`, `github.com/…`), `@handles`, and phone-shaped runs with 10–15 digits that aren't all years. Name = the first line if it's 2–4 capitalised words (not "RESUME"). After parsing, placeholders in body text are restored only when unambiguous (one email/phone/name, exactly one link); otherwise `[LINK]` stays visible for the user to fix.
 - **Tradeoffs:** Heuristics miss things (a name not on the first line, unusual phone formats). That's why the UI says "best-effort" and shows the exact text sent.
+- **Found in the first real call:** a bare personal domain (`asha.example.org`, shown in the PDF without `https://`) reached the LLM. Added a case-sensitive bare-domain rule limited to common site endings (`.com .org .dev .io .in …`), with tests that tech names (`Node.js`, `ASP.NET`, `B.Tech`, `Socket.IO`) are not touched.
+
+## ADR-031 — Send the provider the schema's shape, not its limits
+
+- **Context:** The first real call failed with Gemini's 400 "schema produces a constraint that has too many states for serving". Our Zod-generated JSON Schema carried every `maxLength`/`maxItems`, and nested limits multiply into a huge output-constraint machine.
+- **Options:** Loosen the Zod limits · hand-write a second schema · strip limit keywords from the generated one.
+- **Choice:** `toProviderJsonSchema` strips `maxLength`, `minLength`, `maxItems`, `minItems`, `pattern` (and `$schema`) from `z.toJSONSchema(...)`. The provider gets the **shape** (fields, types, required, no extra properties); **Zod still enforces every limit** on the answer.
+- **Tradeoffs:** The model might produce an over-long field, which Zod then rejects (one retry, then a clear error). That's the right place for the check anyway: provider features are not security.
 
 ## Pending
 

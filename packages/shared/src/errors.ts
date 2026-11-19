@@ -21,6 +21,7 @@ export const ErrorCodeSchema = z.enum([
   'LLM_RATE_LIMITED',
   'LLM_UNAVAILABLE',
   'LLM_BLOCKED',
+  'LLM_REQUEST_REJECTED',
   'PARSE_INVALID_OUTPUT',
 ]);
 export type ErrorCode = z.infer<typeof ErrorCodeSchema>;

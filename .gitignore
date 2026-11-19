@@ -31,3 +31,6 @@ Thumbs.db
 
 # logs
 npm-debug.log*
+
+# temporary debugging files
+*.tmp.*

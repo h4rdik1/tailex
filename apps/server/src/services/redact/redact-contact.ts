@@ -26,6 +26,15 @@ const EMAIL = /[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)*\.[A-Za-z]{2,}
 const URL_LIKE =
   /\b(?:https?:\/\/[^\s<>()"']+|www\.[^\s<>()"']+|(?:linkedin\.com|github\.com|gitlab\.com|x\.com|twitter\.com|leetcode\.com)\/[^\s<>()"']+)/gi;
 
+/**
+ * Bare domains like "asha.example.org" or "mysite.dev/work" (no https://, no www.). PDFs often
+ * show a link's text without the scheme; the first real Gemini call leaked one (ADR-030).
+ * Deliberately case-SENSITIVE and limited to common personal-site endings, so tech names like
+ * "Node.js", "ASP.NET", "B.Tech" or "Vue.js" are not mistaken for links.
+ */
+const BARE_DOMAIN =
+  /\b[a-z0-9][a-z0-9-]*(?:\.[a-z0-9-]+)*\.(?:com|org|net|io|dev|in|co|me|ai|app|xyz|page|site|info|blog|codes)\b(?:\/[^\s<>()"']*)?/g;
+
 /** @handles (emails are already gone by the time this runs, so "a@b.com" can't match). */
 const HANDLE = /(^|[\s(|,])@([A-Za-z0-9_]{2,30})\b/g;
 
@@ -47,10 +56,11 @@ export function redactContact(text: string): RedactionResult {
     return PLACEHOLDERS.email;
   });
 
-  redacted = redacted.replace(URL_LIKE, (match) => {
+  const replaceLink = (match: string): string => {
     links.push(trimTrailingPunctuation(match));
     return PLACEHOLDERS.link + trailingPunctuation(match);
-  });
+  };
+  redacted = redacted.replace(URL_LIKE, replaceLink).replace(BARE_DOMAIN, replaceLink);
 
   redacted = redacted.replace(HANDLE, (_match, before: string) => `${before}${PLACEHOLDERS.link}`);
 

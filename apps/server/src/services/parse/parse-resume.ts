@@ -1,6 +1,6 @@
-import { z } from 'zod';
 import { LlmParsedResumeSchema, type ParseResponse } from '@tailex/shared';
 import { buildParseUserMessage, PARSE_SYSTEM_PROMPT } from '../../prompts/parse.ts';
+import { toProviderJsonSchema } from '../llm/provider-schema.ts';
 import { LlmError, type LlmProvider } from '../llm/types.ts';
 import { redactContact } from '../redact/redact-contact.ts';
 import { assembleResume } from './assemble-resume.ts';
@@ -12,12 +12,10 @@ const PARSE_TEMPERATURE = 0;
 const MAX_ATTEMPTS = 2;
 
 /**
- * JSON Schema handed to the provider's structured-output mode, generated from the same Zod schema
- * we validate with, so the two can never drift apart. `$schema` is dropped (providers don't need it).
+ * The SHAPE we ask the provider for, generated from the same Zod schema we validate with (so the
+ * fields can't drift apart), minus the size limits Gemini can't serve. Zod still enforces them.
  */
-const PARSE_JSON_SCHEMA: Record<string, unknown> = Object.fromEntries(
-  Object.entries(z.toJSONSchema(LlmParsedResumeSchema)).filter(([key]) => key !== '$schema'),
-);
+const PARSE_JSON_SCHEMA = toProviderJsonSchema(LlmParsedResumeSchema);
 
 export interface ParseResumeInput {
   text: string;

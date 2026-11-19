@@ -34,6 +34,36 @@ describe('redactContact: phones', () => {
   );
 });
 
+describe('redactContact: bare domains (regression from the first real Gemini call)', () => {
+  it('redacts the exact header line that leaked "asha.example.org" to the LLM', () => {
+    const line =
+      'Asha Testwala\nasha.testwala@example.com | +91 90000 00000 | Pune, India | github.com/asha-example | asha.example.org';
+
+    const { redactedText, contact } = redactContact(line);
+
+    expect(redactedText).toBe('[NAME]\n[EMAIL] | [PHONE] | Pune, India | [LINK] | [LINK]');
+    expect(contact.links.map((l) => l.url)).toEqual([
+      'https://github.com/asha-example',
+      'https://asha.example.org',
+    ]);
+  });
+
+  it.each(['mysite.dev/work', 'portfolio.co', 'asha.blog'])('redacts %s', (domain) => {
+    expect(redactContact(`See ${domain} now`).redactedText).toBe('See [LINK] now');
+  });
+
+  it.each([
+    'Node.js, Vue.js and Next.js',
+    'ASP.NET Core and .NET 8',
+    'B.Tech, Computer Engineering',
+    'Ph.D. in Physics',
+    'e.g. faster builds',
+    'Used Socket.IO for chat',
+  ])('does not mistake tech names for links: %s', (text) => {
+    expect(redactContact(text).redactedText).toBe(text);
+  });
+});
+
 describe('redactContact: links and handles', () => {
   it.each([
     ['https://asha.example.org/', 'https://asha.example.org/'],

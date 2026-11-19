@@ -44,7 +44,8 @@ Built on branch `phase-3` while the owner was away (not merged to `main`).
 - [x] `parse-v1` + `tailor-v1` stored verbatim (test compares them with SPEC.md), Zod validate + 1 retry, ids
 - [ ] **Owner:** read the final prompt text before the first real Gemini call
 - [x] 3 fictional resume fixtures (redaction)
-- [ ] Try one real call with the owner's own Gemini key (local only) to confirm ADR-027's open points
+- [x] Real call with the owner's Gemini key (local): end-to-end parse works; fixed schema "too many states" (ADR-031), 400 mapping, and a bare-domain redaction leak (ADR-030)
+- [ ] **Owner:** rotate the Gemini key used for testing (it was pasted in chat)
 
 ## Phase 4 — UI v1
 

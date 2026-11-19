@@ -274,6 +274,23 @@ POST /api/parse   headers: x-llm-provider, x-llm-key   body: the raw PDF/DOCX by
   pose as instructions. We strip those tags from the text before wrapping it.
 - **Redaction is best-effort.** Regexes catch common formats; the UI shows exactly what was sent.
 
+### The first real Gemini call: three lessons
+
+Every test passed with the mock provider, and the first real call still found three things:
+
+1. **Tests with fakes can only check what you already expect.** Gemini rejected our JSON Schema
+   ("too many states"): the length limits we copied from Zod were too much for its output engine.
+   Fix: send Google the _shape_ only; Zod keeps checking the limits (ADR-031).
+2. **Wrong error labels hide the real problem.** We showed "key rejected" for a schema bug because
+   every 400 was mapped to `KEY_INVALID`. Now the server logs Google's short codes
+   (`INVALID_ARGUMENT`, `API_KEY_INVALID`) and only a real key problem says "key".
+3. **Look at what was actually sent.** The `redactedPreview` showed `asha.example.org` reaching
+   the LLM: a bare domain our regexes didn't cover. That's exactly why the UI will show users this
+   preview. Fixed with a regression test built from that exact line.
+
+How we debugged it without ever logging the key: we saved the exact request body to a temp file
+and the owner sent it to Google with `curl`, so Google's full error message was visible only to them.
+
 ### Zip bombs, in plain words
 
 A DOCX is really a ZIP file. ZIP compresses repeated data extremely well, so a 20 KB file can

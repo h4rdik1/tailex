@@ -46,7 +46,7 @@ export function createGeminiProvider(options: GeminiOptions = {}): LlmProvider {
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify(buildRequestBody(input)),
       });
-      throwForStatus(response.status);
+      await throwIfFailed(response);
       return readJsonAnswer(await response.json());
     },
 
@@ -55,7 +55,7 @@ export function createGeminiProvider(options: GeminiOptions = {}): LlmProvider {
       const response = await send(`${GEMINI_HOST}/v1beta/models?pageSize=1`, apiKey, {
         method: 'GET',
       });
-      throwForStatus(response.status);
+      await throwIfFailed(response);
     },
   };
 }
@@ -95,11 +95,46 @@ async function fetchOnce(
   }
 }
 
-function throwForStatus(status: number): void {
-  if (status >= 200 && status < 300) return;
-  if (status === 400 || status === 401 || status === 403) throw new LlmError('KEY_INVALID');
-  if (status === 402 || status === 429) throw new LlmError('LLM_RATE_LIMITED');
-  throw new LlmError('LLM_UNAVAILABLE');
+/**
+ * Google APIs return errors as { error: { code, message, status, details: [{ reason }] } }.
+ * We keep only `status` (e.g. INVALID_ARGUMENT) and `reason` (e.g. API_KEY_INVALID), never the
+ * free-text `message`, which can echo the request. A bad key is a 400 with reason API_KEY_INVALID;
+ * any other 400 means OUR request was wrong (a bug), which must not be blamed on the user's key.
+ */
+async function throwIfFailed(response: Response): Promise<void> {
+  if (response.ok) return;
+  const detail = { httpStatus: response.status, ...(await readGoogleErrorCodes(response)) };
+
+  const keyProblem =
+    response.status === 401 ||
+    response.status === 403 ||
+    detail.reason === 'API_KEY_INVALID' ||
+    detail.reason === 'API_KEY_EXPIRED';
+  if (keyProblem) throw new LlmError('KEY_INVALID', detail);
+  if (response.status === 402 || response.status === 429) {
+    throw new LlmError('LLM_RATE_LIMITED', detail);
+  }
+  if (response.status >= 400 && response.status < 500) {
+    throw new LlmError('LLM_REQUEST_REJECTED', detail);
+  }
+  throw new LlmError('LLM_UNAVAILABLE', detail);
+}
+
+const SAFE_CODE = /^[A-Z][A-Z0-9_]{0,63}$/;
+
+async function readGoogleErrorCodes(
+  response: Response,
+): Promise<{ providerStatus?: string; reason?: string }> {
+  const body: unknown = await response.json().catch(() => undefined);
+  const status = getPath(body, ['error', 'status']);
+  const details = getPath(body, ['error', 'details']);
+  const reason = Array.isArray(details)
+    ? details.map((d) => getPath(d, ['reason'])).find((r) => typeof r === 'string')
+    : undefined;
+  return {
+    ...(typeof status === 'string' && SAFE_CODE.test(status) ? { providerStatus: status } : {}),
+    ...(typeof reason === 'string' && SAFE_CODE.test(reason) ? { reason } : {}),
+  };
 }
 
 /** Pulls the model's text out of a generateContent response and parses it as JSON. */

@@ -38,6 +38,14 @@ function fakeFetch(responses: (Response | Error)[]): {
   return { fetchFn, seen };
 }
 
+/** The standard Google API error shape (google.rpc.Status with an ErrorInfo detail). */
+function googleError(status: number, rpcStatus: string, reason: string, message = 'x'): Response {
+  return Response.json(
+    { error: { code: status, message, status: rpcStatus, details: [{ reason }] } },
+    { status },
+  );
+}
+
 function geminiAnswer(json: unknown): Response {
   return Response.json({
     candidates: [{ content: { parts: [{ text: JSON.stringify(json) }] }, finishReason: 'STOP' }],
@@ -90,8 +98,10 @@ describe('Gemini response handling', () => {
     });
   });
 
+  // A plain 400 is OUR request being wrong (found in the first real Gemini call), not the key.
   it.each([
-    [400, 'KEY_INVALID'],
+    [400, 'LLM_REQUEST_REJECTED'],
+    [404, 'LLM_REQUEST_REJECTED'],
     [401, 'KEY_INVALID'],
     [403, 'KEY_INVALID'],
     [402, 'LLM_RATE_LIMITED'],
@@ -101,6 +111,39 @@ describe('Gemini response handling', () => {
     const { fetchFn } = fakeFetch([new Response('{}', { status })]);
 
     expect(await codeOf(createGeminiProvider({ fetchFn }).generateJson(INPUT))).toBe(code);
+  });
+
+  it('treats a 400 with reason API_KEY_INVALID as a bad key', async () => {
+    const { fetchFn } = fakeFetch([googleError(400, 'INVALID_ARGUMENT', 'API_KEY_INVALID')]);
+
+    expect(await codeOf(createGeminiProvider({ fetchFn }).generateJson(INPUT))).toBe('KEY_INVALID');
+  });
+
+  it("keeps Google's short status codes for our logs, and drops the free-text message", async () => {
+    const { fetchFn } = fakeFetch([googleError(400, 'INVALID_ARGUMENT', 'BAD_SCHEMA', KEY)]);
+
+    try {
+      await createGeminiProvider({ fetchFn }).generateJson(INPUT);
+      expect.unreachable();
+    } catch (error) {
+      expect(error).toBeInstanceOf(LlmError);
+      expect((error as LlmError).detail).toEqual({
+        httpStatus: 400,
+        providerStatus: 'INVALID_ARGUMENT',
+        reason: 'BAD_SCHEMA',
+      });
+      expect(JSON.stringify((error as LlmError).detail)).not.toContain(KEY);
+    }
+  });
+
+  it('ignores status/reason values that are not short UPPER_SNAKE codes', async () => {
+    const { fetchFn } = fakeFetch([googleError(400, `leak ${KEY}`, 'lower case reason')]);
+
+    try {
+      await createGeminiProvider({ fetchFn }).generateJson(INPUT);
+    } catch (error) {
+      expect((error as LlmError).detail).toEqual({ httpStatus: 400 });
+    }
   });
 
   it('retries once on a 5xx, then succeeds', async () => {

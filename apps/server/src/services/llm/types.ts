@@ -25,8 +25,24 @@ export interface LlmProvider {
 
 export type LlmErrorCode = Extract<
   ErrorCode,
-  'KEY_INVALID' | 'LLM_RATE_LIMITED' | 'LLM_UNAVAILABLE' | 'LLM_BLOCKED' | 'PARSE_INVALID_OUTPUT'
+  | 'KEY_INVALID'
+  | 'LLM_RATE_LIMITED'
+  | 'LLM_UNAVAILABLE'
+  | 'LLM_BLOCKED'
+  | 'LLM_REQUEST_REJECTED'
+  | 'PARSE_INVALID_OUTPUT'
 >;
+
+/**
+ * Safe facts about a provider failure, for OUR logs only (never sent to the browser).
+ * Only short UPPER_SNAKE codes like "INVALID_ARGUMENT" / "API_KEY_INVALID" are kept: they can't
+ * contain the key or resume text, unlike the provider's free-text error message, which we drop.
+ */
+export interface LlmErrorDetail {
+  httpStatus: number;
+  providerStatus?: string;
+  reason?: string;
+}
 
 /**
  * The only error type providers throw. Its message is a FIXED sentence we wrote, never text from
@@ -34,11 +50,13 @@ export type LlmErrorCode = Extract<
  */
 export class LlmError extends Error {
   readonly code: LlmErrorCode;
+  readonly detail: LlmErrorDetail | undefined;
 
-  constructor(code: LlmErrorCode) {
+  constructor(code: LlmErrorCode, detail?: LlmErrorDetail) {
     super(LLM_ERROR_MESSAGES[code]);
     this.name = 'LlmError';
     this.code = code;
+    this.detail = detail;
   }
 }
 
@@ -47,5 +65,6 @@ export const LLM_ERROR_MESSAGES: Record<LlmErrorCode, string> = {
   LLM_RATE_LIMITED: 'The provider says this key hit its rate limit or quota. Try again later.',
   LLM_UNAVAILABLE: 'The provider did not respond in time. Please try again.',
   LLM_BLOCKED: 'The provider declined to process this text.',
+  LLM_REQUEST_REJECTED: 'The AI provider rejected our request. This is a problem on our side.',
   PARSE_INVALID_OUTPUT: 'The AI returned data we could not use, even after a retry.',
 };

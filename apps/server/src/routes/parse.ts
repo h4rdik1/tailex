@@ -4,29 +4,23 @@ import { getLlmContext, requireLlmKey } from '../middleware/require-llm-key.ts';
 import { ExtractionError, type TextExtractor } from '../services/extract/extractor.ts';
 import { detectFileType } from '../services/extract/file-type.ts';
 import type { ProviderRegistry } from '../services/llm/registry.ts';
-import { LlmError, type LlmErrorCode } from '../services/llm/types.ts';
+import { LlmError } from '../services/llm/types.ts';
 import { parseResume } from '../services/parse/parse-resume.ts';
+import type { Logger } from '../middleware/logger.ts';
+import { sendLlmError } from './llm-errors.ts';
 
 export interface ParseRouteDeps {
   registry: ProviderRegistry;
   extractText: TextExtractor;
+  logger: Logger;
 }
-
-/** HTTP status for each LLM error code. */
-const LLM_ERROR_STATUS: Record<LlmErrorCode, number> = {
-  KEY_INVALID: 401,
-  LLM_RATE_LIMITED: 429,
-  LLM_UNAVAILABLE: 503,
-  LLM_BLOCKED: 422,
-  PARSE_INVALID_OUTPUT: 502,
-};
 
 /**
  * POST /api/parse: the file is sent as the raw request body (Content-Type: application/pdf or the
  * DOCX type), so no multipart library is needed. express.raw keeps it in memory and stops at 1 MB.
  * Order: key check → read body (≤ 1 MB) → magic bytes → extract → redact + LLM → validate.
  */
-export function createParseRouter({ registry, extractText }: ParseRouteDeps): Router {
+export function createParseRouter({ registry, extractText, logger }: ParseRouteDeps): Router {
   const router = Router();
   const readFileBody = express.raw({
     type: () => true, // accept any Content-Type; the magic bytes decide what the file really is
@@ -55,7 +49,7 @@ export function createParseRouter({ registry, extractText }: ParseRouteDeps): Ro
       res.status(200).json(result);
     } catch (error) {
       if (!(error instanceof LlmError)) throw error;
-      sendError(res, LLM_ERROR_STATUS[error.code], error.code, error.message);
+      sendLlmError(res, logger, 'parse', error);
     }
   });
 
