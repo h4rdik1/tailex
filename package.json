@@ -22,7 +22,9 @@
     "format:check": "prettier --check .",
     "typecheck": "npm run typecheck --workspaces",
     "test": "vitest run",
-    "test:coverage": "vitest run --coverage"
+    "test:coverage": "vitest run --coverage",
+    "test:docker": "docker compose -f compose.dev.yaml run --rm --service-ports=false dev sh -c \"npm ci --no-audit --no-fund && npm run test:coverage\"",
+    "dev:docker": "docker compose -f compose.dev.yaml run --rm --service-ports dev sh -c \"npm ci --no-audit --no-fund && npm run dev:server\""
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",

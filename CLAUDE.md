@@ -32,7 +32,7 @@ Auth, database, payments, multiple templates, cover letters, saved resumes, serv
 ## Workflow rules
 
 1. Work one phase at a time (see docs/PROGRESS.md). **Plan mode first**, then wait for approval of the plan.
-2. After each phase: run lint, typecheck and tests, **paste the real output**, summarize the changes, list uncertainties, STOP for review. One conventional commit per phase.
+2. After each phase: run lint, typecheck and tests (`npm run test:docker` for the full suite), **paste the real output**, summarize the changes, list uncertainties, add the phase to docs/LEARNING.md (plain-language "how it works" + interview Q&A), STOP for review. One conventional commit per phase.
 3. **Dependencies:** ask before adding any. State why, confirm it exists and is maintained, **pin exact versions**. Prefer the standard library.
 4. Never edit a test just to make it pass without saying why. Never say something works unless it was run.
 5. Log every non-trivial decision in docs/DECISIONS.md ("why X over Y").

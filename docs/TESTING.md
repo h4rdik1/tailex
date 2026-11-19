@@ -43,12 +43,13 @@
 - **pdflatex is not installed on the dev machine.** Compile tests run inside the dev Docker image (Phase 2) and in CI (TeX Live installed in the job). Locally, compile tests are skipped with a clear message when `pdflatex` is missing; they are never silently passed.
 - Windows dev: `.gitattributes` forces LF so fixtures and snapshots match CI.
 
-## Commands (wired in Phase 1)
+## Commands
 
 ```
 npm run lint
 npm run typecheck
-npm test
+npm test               # Windows: compile tests skipped with a warning
 npm run test:coverage
-npm run e2e
+npm run test:docker    # full suite + coverage gates in the Linux image with pdflatex (also run by CI)
+npm run e2e            # Phase 6
 ```

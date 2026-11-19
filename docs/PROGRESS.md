@@ -17,14 +17,18 @@ Each phase: plan mode → approval → build → lint/typecheck/test output past
 - [x] GitHub Actions: lint, typecheck, test, `npm audit`
 - [x] `.env.example`
 
-## Phase 2 — LaTeX template + escape + sandboxed compile
+## Phase 2 — LaTeX template + escape + sandboxed compile ✅
 
-- [ ] **Owner:** `escapeLatex` (spec + tests first, then wait)
-- [ ] One-page template, minimal packages
-- [ ] Compile service: flags, `openin/openout_any=p`, 10 s tree-kill, temp dir, concurrency cap
-- [ ] Log parser → `{line, message}`; page-count detection
-- [ ] Minimal **dev Dockerfile** with pdflatex (Docker Desktop + WSL2 installed by owner first)
-- [ ] Injection + fuzz tests
+- [x] `escapeLatex` spec (`apps/server/src/services/latex/escape-latex.spec.md`) + tests written
+- [x] **Owner:** implemented `escapeLatex` (49/49 tests, 100% coverage)
+- [x] One-page template, minimal packages (no texlive-latex-extra, ADR-020)
+- [x] Compile service: flags, `openin/openout_any=p`, 10 s tree-kill, temp dir, concurrency cap
+- [x] Log parser → `{line, message}`; page-count detection
+- [x] Dev Dockerfile with pdflatex + `compose.dev.yaml` + `npm run test:docker`
+- [x] Sandbox tests verified against a control run (ADR-024)
+- [x] Injection + fuzz tests written (they pass once `escapeLatex` exists)
+- [x] `POST /api/render`, ResumeData schema, text normalization (ADR-021), docs/LEARNING.md
+- [x] Commit `feat: latex template, escape and sandboxed compile`
 
 ## Phase 3 — Providers + key + redaction + extraction + parse
 

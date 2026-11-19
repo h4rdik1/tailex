@@ -73,7 +73,13 @@ npm run dev:server
 npm run dev:web
 ```
 
-Checks (the same ones CI runs):
+Full test suite with real pdflatex, inside Docker ([how it works](docs/LEARNING.md)):
+
+```bash
+npm run test:docker
+```
+
+Quick checks on Windows (compile tests are skipped with a warning):
 
 ```bash
 npm run lint && npm run format:check && npm run typecheck && npm test && npm run build
@@ -83,7 +89,7 @@ Production-style run: `npm run build`, then `npm start`. Express serves the buil
 
 ## Docs
 
-[SPEC](docs/SPEC.md) · [ARCHITECTURE](docs/ARCHITECTURE.md) · [DECISIONS](docs/DECISIONS.md) · [SECURITY](docs/SECURITY.md) · [TESTING](docs/TESTING.md) · [PROGRESS](docs/PROGRESS.md)
+[SPEC](docs/SPEC.md) · [ARCHITECTURE](docs/ARCHITECTURE.md) · [DECISIONS](docs/DECISIONS.md) · [SECURITY](docs/SECURITY.md) · [TESTING](docs/TESTING.md) · [PROGRESS](docs/PROGRESS.md) · [LEARNING](docs/LEARNING.md)
 
 ## License
 

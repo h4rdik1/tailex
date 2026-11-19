@@ -1,0 +1,22 @@
+# Dev/test image: Node 24 + a minimal TeX Live, so pdflatex runs the same way locally and in CI.
+# The production image (multi-stage, read-only FS) comes in Phase 6. See docs/LEARNING.md.
+FROM node:24-trixie-slim
+
+# Only the TeX Live packages the template needs (verified with kpsewhich, docs/DECISIONS.md ADR-020).
+# --no-install-recommends skips docs and extras; removing the apt lists keeps the layer small.
+RUN apt-get update \
+ && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+      texlive-latex-base \
+      texlive-latex-recommended \
+      texlive-fonts-recommended \
+      lmodern \
+ && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+# Run as the unprivileged "node" user that the base image provides (never as root).
+# The node_modules folders are pre-created so the named volumes mounted there belong to "node".
+RUN mkdir -p /app/node_modules /app/apps/web/node_modules && chown -R node:node /app
+USER node
+
+ENV REQUIRE_PDFLATEX=1

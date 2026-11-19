@@ -26,3 +26,15 @@ jobs:
       - run: npm test
       - run: npm run build
       - run: npm audit --audit-level=high
+
+  # Same Docker image as `npm run test:docker` locally: real pdflatex, coverage gates on.
+  compile:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - run: docker compose -f compose.dev.yaml build
+      # The container runs as the non-root "node" user (uid 1000), but the CI checkout belongs
+      # to the runner user. Let it write the coverage report into the mounted folder.
+      - run: chmod -R a+rwX .
+      - run: npm run test:docker

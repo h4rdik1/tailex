@@ -1,0 +1,24 @@
+# Local dev/test environment with pdflatex. Usage: npm run test:docker / npm run dev:docker
+services:
+  dev:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    image: tailex-dev
+    working_dir: /app
+    volumes:
+      # Your source code, live: edits on Windows are seen inside the container.
+      - .:/app
+      # Linux gets its own node_modules. The Windows one has Windows-only native binaries
+      # (esbuild, rollup), so we hide it behind this named volume.
+      - node_modules:/app/node_modules
+      - web_node_modules:/app/apps/web/node_modules
+    environment:
+      REQUIRE_PDFLATEX: '1'
+      PORT: '8080'
+    ports:
+      - '8080:8080'
+
+volumes:
+  node_modules:
+  web_node_modules:

@@ -132,6 +132,45 @@ Short ADRs. Format: **Context · Options · Choice · Tradeoffs.** New decisions
 - **Choice:** Ban it with a core `no-restricted-syntax` rule (verified that it errors). Skip `eslint-config-prettier`, because no enabled config has formatting rules. Prettier runs separately (`format:check` in CI).
 - **Tradeoffs:** No other React-specific lint rules beyond `react-hooks`. Two fewer dependencies.
 
+## ADR-020 — Minimal TeX Live: no `texlive-latex-extra`
+
+- **Context:** The template needs bullets with custom spacing and section headings. The usual packages (`enumitem`, `titlesec`) are only in Debian's `texlive-latex-extra`, a large package. Checked with `kpsewhich` in `node:24-trixie-slim`.
+- **Options:** Install `texlive-latex-extra` · write those two pieces with plain LaTeX.
+- **Choice:** **Plain LaTeX** (`list` environment and a small `\resumesection` macro). Image packages: `texlive-latex-base`, `texlive-latex-recommended`, `texlive-fonts-recommended`, `lmodern` (TeX ≈ 130 MB).
+- **Tradeoffs:** A few more lines in the template. Smaller image, faster cold starts on Cloud Run, smaller attack surface.
+
+## ADR-021 — Normalize text before escaping (unsupported characters are dropped and reported)
+
+- **Context:** pdflatex with T1 fonts can't print emoji, CJK and many symbols. One such character made the whole compile fail with a confusing error. PDF extraction also produces ligatures (`ﬁ`) and odd spaces.
+- **Options:** Switch to XeLaTeX/LuaLaTeX with Unicode fonts (much bigger image, slower) · fail the request · clean the text.
+- **Choice:** `createTextCleaner` (`normalize-text.ts`): NFC, map ligatures/hyphens/NBSP, remove invisible characters, keep ASCII + Latin-1 + a tested set of typography (`‘ ’ “ ” – — … • € ™`), **drop anything else and report it** in the `x-render-warnings` header so the UI can warn the user.
+- **Tradeoffs:** Non-Latin names (e.g. Devanagari) can't be printed in v1. This is an accepted limitation, made visible to the user, never silent. A compile test proves every allowed character compiles.
+
+## ADR-022 — Concurrency cap without a queue
+
+- **Context:** pdflatex is CPU-heavy; Cloud Run gives us 1–2 small instances.
+- **Options:** No cap · cap + waiting queue · cap + immediate `503 BUSY` with `Retry-After`.
+- **Choice:** **Cap 2, no queue** (`slot-limiter.ts`).
+- **Tradeoffs:** Under a burst some users see "busy, retry in 5 s" (the UI will retry once automatically in Phase 4). A queue would hold connections open and use memory, which is an abuse vector with no benefit at our traffic.
+
+## ADR-023 — Compile tests run in Docker (and are never silently skipped there)
+
+- **Context:** The owner's laptop is Windows without pdflatex. CI is Linux.
+- **Choice:** `compose.dev.yaml` + `Dockerfile.dev` provide pdflatex. `npm run test:docker` runs the whole suite in that image, and CI's `compile` job runs the same command. Compile tests use `describe.skipIf(!hasPdflatex)`, but with `REQUIRE_PDFLATEX=1` (set in the image) a missing pdflatex **throws** instead of skipping. Coverage gates are enforced only in that mode.
+- **Tradeoffs:** `npm test` on Windows covers less, and says so in a warning. In return, identical results locally and in CI.
+
+## ADR-024 — Sandbox flags verified against a control run
+
+- **Context:** "The compile failed" is not proof that the sandbox blocked an attack: without `openin_any=p`, `\input{/etc/passwd}` DOES read the file and then fails on its contents.
+- **Choice:** Sandbox tests assert the specific refusal (`File '/etc/passwd.tex' not found`, `\openin` stream stays closed, `runsystem(...)...disabled`, `I can't write on file`). These were compared manually against a run without the flags (see docs/LEARNING.md, Phase 2).
+- **Tradeoffs:** Tests depend on exact pdflatex messages, so a TeX Live upgrade may need test updates. That's acceptable for a security property.
+
+## ADR-025 — Link URLs: strict allowlist + `escapeHrefUrl`
+
+- **Context:** A URL inside `\href{...}` follows different rules from normal text: `%` must become `\%` but `~` and `_` must stay as-is.
+- **Choice:** Zod `SAFE_URL_PATTERN` (http/https only, no `\ { } $ ^ | " space`). Inside `\href`, `escapeHrefUrl` escapes only `% # &`. The visible link text goes through `escapeLatex` like all other text.
+- **Tradeoffs:** Some exotic but valid URLs are rejected. Tested: the PDF's link target equals the original URL.
+
 ## Pending
 
 - **Analytics:** Cloudflare Web Analytics vs Umami vs GoatCounter. Owner decides in Phase 6. Counts only: `resume_uploaded`, `pdf_generated`, `sample_used`.

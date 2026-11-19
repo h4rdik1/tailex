@@ -62,7 +62,8 @@ upgrade-insecure-requests
 
 ## Container hardening (Phases 2 and 6)
 
-Multi-stage build, non-root user, read-only root FS with a writable temp dir only, healthcheck, CPU/memory limits, minimal TeX Live (only the packages the template needs).
+- **Phase 2 (dev image, done):** Debian slim + 4 TeX Live packages only (ADR-020), runs as the non-root `node` user, compile work happens in `os.tmpdir()` with a fresh folder per request. Sandbox flags are verified by tests against a control run (ADR-024).
+- **Phase 6 (production):** multi-stage build, non-root user, read-only root FS that keeps `/tmp` writable (required by the compile service), healthcheck, CPU/memory limits.
 
 ## Logging
 
