@@ -3,17 +3,20 @@
 Rules for any AI agent working in this repo. Read fully before acting.
 
 ## Product
+
 **Tailex** (repo folder `cvfit`): upload a resume (PDF/DOCX) → extract text → redact PII → LLM parses it into structured JSON → user reviews and edits → render through our own one-page ATS-friendly LaTeX template → PDF. v1.1: paste a JD → see the missing skills → user ticks the ones they really have → LLM suggests bullet rewrites → truth guard → accept/reject diff → re-render.
 We **never** add skills the user didn't confirm. Users **never** submit raw LaTeX. No accounts, no database, nothing stored or logged.
 
 ## Role and quality bar
+
 - Senior engineer pair-programming. The owner must be able to explain every line in an interview: **clarity over cleverness**.
 - Strict TypeScript, no `any`, small functions, meaningful names, no dead code, every error handled.
 - Modular: one folder per feature (frontend) and per service (backend). Shared Zod schemas live in `packages/shared`.
 - Accessible (keyboard, focus, aria-live), mobile-responsive, light/dark mode.
 
 ## Stack (do not change without asking)
-- **Frontend:** Vite + React 19 + TypeScript (strict) + Tailwind v4 + shadcn/ui (Radix) + React Router. Static SPA.
+
+- **Frontend:** Vite + React 19 + TypeScript (strict) + Tailwind v4 + shadcn/ui (Radix). Static SPA, no router (steps are in-memory state, ADR-017). Server runs TypeScript natively on Node 24 (no tsx, ADR-016).
 - **Backend:** Node 24 LTS + Express + TypeScript. It serves the API **and** the built SPA from one container (same origin, no CORS).
 - **Shared:** Zod schemas in `packages/shared` (npm workspaces).
 - **PDF:** pdflatex (minimal TeX Live) in Docker.
@@ -23,9 +26,11 @@ We **never** add skills the user didn't confirm. Users **never** submit raw LaTe
 - **Theme:** zinc neutral base, emerald accent, monospace accents.
 
 ## Non-goals
+
 Auth, database, payments, multiple templates, cover letters, saved resumes, server-side key storage, any LLM call using the owner's own key, agent loops or tool use.
 
 ## Workflow rules
+
 1. Work one phase at a time (see docs/PROGRESS.md). **Plan mode first**, then wait for approval of the plan.
 2. After each phase: run lint, typecheck and tests, **paste the real output**, summarize the changes, list uncertainties, STOP for review. One conventional commit per phase.
 3. **Dependencies:** ask before adding any. State why, confirm it exists and is maintained, **pin exact versions**. Prefer the standard library.
@@ -36,6 +41,7 @@ Auth, database, payments, multiple templates, cover letters, saved resumes, serv
 8. Ask before choosing analytics (Cloudflare Web Analytics / Umami / GoatCounter). Counts only, no content.
 
 ## Security musts (details in docs/SECURITY.md)
+
 - BYOK: the key lives in browser memory. Optional "Remember on this device" (off by default) saves it to localStorage. "Clear key" removes it from both. **No cookies.**
 - One helper (`apps/web/src/lib/api-client.ts`) adds `x-llm-key` + `x-llm-provider` headers. Never put the key in a URL, query or body.
 - Only `/api/parse`, `/api/tailor` and `/api/key/test` read `x-llm-key`.
@@ -50,7 +56,9 @@ Auth, database, payments, multiple templates, cover letters, saved resumes, serv
 - Secrets: `.env.example` only.
 
 ## Data and privacy in the repo
+
 - **The repo is public.** The sample resume and **all test fixtures use fictional people only**: never the owner's real name, phone, email, links or resume content.
 
 ## Prompts
+
 Runtime prompts live only in `apps/server/src/prompts/parse.ts` (`parse-v1`) and `tailor.ts` (`tailor-v1`) as versioned constants, stored verbatim from docs/SPEC.md. Never in the browser. Single call, JSON mode, temperature 0–0.3. Show the final prompt text before first use.
