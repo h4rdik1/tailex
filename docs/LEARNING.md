@@ -233,6 +233,57 @@ How to explain it in 30 seconds:
 
 ---
 
+## Phase 3 — The key, the LLM and parsing (branch `phase-3`)
+
+### How an upload flows through the code
+
+```
+POST /api/parse   headers: x-llm-provider, x-llm-key   body: the raw PDF/DOCX bytes
+  │
+  ├─ middleware/require-llm-key.ts   provider name → allowlist (registry.ts) → 400 if unknown
+  │                                  key present + looks like a key → else 401
+  │                                  stores {provider, key} in a WeakMap tied to THIS request
+  ├─ express.raw (≤ 1 MB)            413 FILE_TOO_LARGE if bigger; kept in memory
+  ├─ extract/file-type.ts            magic bytes: %PDF- or ZIP+word/document.xml → else 415
+  ├─ extract/extractor.ts            bytes → text (pending dependency approval → 501 for now)
+  ├─ redact/redact-contact.ts        email/phone/links/handles/name → [EMAIL] [PHONE] [LINK] [NAME]
+  ├─ prompts/parse.ts                system prompt parse-v1 + "<resume_text>…</resume_text>"
+  ├─ llm/gemini.ts                   ONE call, JSON mode, temperature 0, key in a header
+  ├─ shared LlmParsedResumeSchema    Zod validates; invalid → retry once → 502
+  └─ parse/assemble-resume.ts        add ids (exp0-b1…), attach contact, restore placeholders
+```
+
+### Ideas worth being able to explain
+
+- **BYOK without storing anything.** The key arrives in a header, lives in a `WeakMap` keyed by
+  the request object, is used for one `fetch`, and disappears when the request is garbage-collected.
+- **Allowlist vs blocklist (SSRF).** We never ask "is this URL bad?"; we only accept the exact
+  names we know (`gemini`, and `mock` outside production). The URL is a constant in our code.
+- **Errors that can't leak.** Providers throw only `LlmError`, whose message is a sentence we
+  wrote. Gemini's own error text (which might echo the key) is never read into our errors.
+- **Why the logger has no "log the request" function.** If it's impossible to call, it's
+  impossible to leak. The log-capture test sends a fake "canary" key through 4 scenarios and
+  searches every log line and response for it.
+- **Retry policy.** Network errors and 5xx: retry once (temporary). 4xx: never (a bad key won't
+  fix itself). Invalid JSON from the model: one more LLM call, then a clear error.
+- **One schema, two uses.** `z.toJSONSchema(LlmParsedResumeSchema)` tells Gemini the shape we
+  want; `LlmParsedResumeSchema.safeParse` checks what came back. They can't drift apart.
+- **`.strict()`** makes Zod reject extra keys, so the model can't add fields like `"salary"`.
+- **Tag breakout.** The resume text could contain `</resume_text>` to "end" the data block and
+  pose as instructions. We strip those tags from the text before wrapping it.
+- **Redaction is best-effort.** Regexes catch common formats; the UI shows exactly what was sent.
+
+### Interview Q&A (Phase 3)
+
+- **Why not use the Gemini SDK?** One endpoint, ~100 lines; plain `fetch` shows exactly what is sent
+  and keeps the host constant. Fewer dependencies to audit.
+- **What if the LLM ignores the prompt and invents a job?** Parsing only restructures text we
+  already have; the user reviews every field. Inventing in _tailoring_ is caught by the truth guard.
+- **How do you test without spending money?** A mock provider plus a fake `fetch` that replays
+  scripted Gemini responses (200, 403, 429, 503, network error, blocked prompt).
+
+---
+
 ## Commands cheat sheet
 
 ```bash

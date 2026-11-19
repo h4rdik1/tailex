@@ -8,6 +8,21 @@ export const ErrorCodeSchema = z.enum([
   'BUSY',
   'COMPILE_FAILED',
   'COMPILE_TIMEOUT',
+  // Key and provider (Phase 3)
+  'KEY_MISSING',
+  'KEY_INVALID',
+  'PROVIDER_UNKNOWN',
+  // Upload and text extraction
+  'FILE_TOO_LARGE',
+  'UNSUPPORTED_FILE',
+  'EXTRACTION_UNAVAILABLE',
+  'TEXT_EXTRACTION_FAILED',
+  'TEXT_TOO_LONG',
+  // LLM call
+  'LLM_RATE_LIMITED',
+  'LLM_UNAVAILABLE',
+  'LLM_BLOCKED',
+  'PARSE_INVALID_OUTPUT',
 ]);
 export type ErrorCode = z.infer<typeof ErrorCodeSchema>;
 

@@ -49,14 +49,14 @@ ResumeData = {
 
 All responses are JSON unless noted. Errors: `{ "error": { "code": string, "message": string, "details"?: unknown } }`. Messages never contain the key, file contents or raw logs.
 
-| Method + path        | Reads `x-llm-key`? | Input                                                  | Output                                                                                                          |
-| -------------------- | ------------------ | ------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------- |
-| `GET /api/health`    | no                 | —                                                      | `{ ok: true }` (also used for the cold-start "waking up" ping)                                                  |
-| `POST /api/key/test` | **yes**            | headers only                                           | `{ ok: true }` or error `KEY_INVALID`                                                                           |
-| `POST /api/parse`    | **yes**            | `multipart/form-data` `file`                           | `{ resume: ResumeData, redactedPreview: string }`                                                               |
-| `POST /api/render`   | **no**             | `{ resume: ResumeData, spacing: "normal" \| "tight" }` | `application/pdf` + header `x-page-count`, or error `COMPILE_FAILED` with `details: { line, message }[]`        |
-| `POST /api/keywords` | **no**             | `{ resume, jd }`                                       | `{ matched, missing: { skill, required, suggestedSection }[], extra, scoreBefore }`                             |
-| `POST /api/tailor`   | **yes**            | `{ resume, jd, confirmedSkills: string[] }`            | `{ suggestions: { id, original, suggested, reason, status: "ok" \| "blocked", blockedReason? }[], scoreAfter }` |
+| Method + path        | Reads `x-llm-key`? | Input                                                                           | Output                                                                                                          |
+| -------------------- | ------------------ | ------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
+| `GET /api/health`    | no                 | —                                                                               | `{ ok: true }` (also used for the cold-start "waking up" ping)                                                  |
+| `POST /api/key/test` | **yes**            | headers only                                                                    | `{ ok: true }` or error `KEY_INVALID`                                                                           |
+| `POST /api/parse`    | **yes**            | the file as the raw body (`Content-Type: application/pdf` or DOCX type), ≤ 1 MB | `{ resume: ResumeData, redactedPreview: string }`                                                               |
+| `POST /api/render`   | **no**             | `{ resume: ResumeData, spacing: "normal" \| "tight" }`                          | `application/pdf` + header `x-page-count`, or error `COMPILE_FAILED` with `details: { line, message }[]`        |
+| `POST /api/keywords` | **no**             | `{ resume, jd }`                                                                | `{ matched, missing: { skill, required, suggestedSection }[], extra, scoreBefore }`                             |
+| `POST /api/tailor`   | **yes**            | `{ resume, jd, confirmedSkills: string[] }`                                     | `{ suggestions: { id, original, suggested, reason, status: "ok" \| "blocked", blockedReason? }[], scoreAfter }` |
 
 **Header rule:** the key-reading middleware is mounted **only** on `/api/parse`, `/api/tailor` and `/api/key/test`. A test asserts that `/api/render` and `/api/keywords` never read or forward `x-llm-key`.
 `x-llm-provider` must be in the server allowlist (`gemini`, `mock` in dev/test only). Anything else → `400 PROVIDER_UNKNOWN`. Any URL-like value → rejected.

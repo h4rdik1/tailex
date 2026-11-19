@@ -171,6 +171,38 @@ Short ADRs. Format: **Context · Options · Choice · Tradeoffs.** New decisions
 - **Choice:** Zod `SAFE_URL_PATTERN` (http/https only, no `\ { } $ ^ | " space`). Inside `\href`, `escapeHrefUrl` escapes only `% # &`. The visible link text goes through `escapeLatex` like all other text.
 - **Tradeoffs:** Some exotic but valid URLs are rejected. Tested: the PDF's link target equals the original URL.
 
+## ADR-026 — Upload as a raw request body (no multipart library)
+
+- **Context:** `/api/parse` receives exactly one file of at most 1 MB.
+- **Options:** `multer`/`busboy` with `multipart/form-data` · send the file as the raw body.
+- **Choice:** **Raw body** via Express's built-in `express.raw({ limit: 1 MB })`. The browser will `fetch(url, { body: file })`. The Content-Type header is ignored for security decisions; **magic bytes** decide the type (`file-type.ts`).
+- **Tradeoffs:** No file name or extra form fields in the same request (we don't need them). One fewer dependency, and the body never touches disk.
+
+## ADR-027 — Gemini over plain REST, model `gemini-3.5-flash-lite`
+
+- **Context:** Rule 7: check the official docs, not memory. Read on 2026-11-20 at aistudio.google.com/docs (ai.google.dev now redirects there).
+- **Choice:** `fetch` against `POST https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent` with `systemInstruction`, `generationConfig.responseMimeType = "application/json"` and `responseJsonSchema` (generated from the same Zod schema with `z.toJSONSchema`). The key goes in the **`x-goog-api-key` header**, never the URL. Key check: `GET /v1beta/models?pageSize=1` (no tokens). No SDK.
+- **Why this model:** labelled Stable, described as the fastest and most cost-effective 3.5 model, and named by Google for new projects. `gemini-2.5-flash` is being auto-routed to it from 2026-12-01.
+- **Not confirmed in the docs (verify with a real key before launch):** free-tier availability and limits for this model; the exact status code for an invalid key (we map 400/401/403 to `KEY_INVALID`, so a malformed request of ours would also show as "key rejected"); the error JSON shape; whether `x-goog-api-key` is accepted on the models-list endpoint; the free-tier data-use rule (the UI note stays cautious: "may use prompts").
+- **Tradeoffs:** We maintain ~100 lines of adapter instead of an SDK, but we see every byte that's sent, and the host is a constant (SSRF).
+
+## ADR-028 — A 30-line logger instead of pino
+
+- **Context:** Logs must never contain the key, bodies or file contents.
+- **Choice:** `createLogger` writes JSON lines with **only scalar fields we pass explicitly**. There is no API to log a request object, so headers and bodies can't leak by accident. A log-capture test sends a canary key through success, invalid output, a provider error that echoes the key, and a crash.
+- **Tradeoffs:** No log levels config, transports or pretty printing. Fine for Cloud Run, which just collects stdout.
+
+## ADR-029 — PDF/DOCX extraction: dependency proposal (waiting for owner approval)
+
+- **Context:** Reading text from PDFs properly needs a PDF engine. Writing one is out of scope. Rule 3: ask before adding.
+- **Proposal:** `unpdf@2.2.1` (MIT, 0 runtime deps, UnJS, wraps Mozilla's pdf.js for servers, updated 2026-11-15) for PDF, and `mammoth@1.13.0` (BSD-2, updated 2026-09-26) for DOCX (raw text mode). Rejected: `pdf-parse` (pulls a native canvas module), raw `pdfjs-dist` (more setup for the same engine).
+- **Until approved:** `TextExtractor` is an interface; the default answers `501 EXTRACTION_UNAVAILABLE`; tests inject a fake. Zip-bomb protection for DOCX (uncompressed-size cap) gets built with mammoth.
+
+## ADR-030 — Redaction heuristics and placeholder restore
+
+- **Choice:** Regexes for emails, URLs (incl. bare `linkedin.com/in/…`, `github.com/…`), `@handles`, and phone-shaped runs with 10–15 digits that aren't all years. Name = the first line if it's 2–4 capitalised words (not "RESUME"). After parsing, placeholders in body text are restored only when unambiguous (one email/phone/name, exactly one link); otherwise `[LINK]` stays visible for the user to fix.
+- **Tradeoffs:** Heuristics miss things (a name not on the first line, unusual phone formats). That's why the UI says "best-effort" and shows the exact text sent.
+
 ## Pending
 
 - **Analytics:** Cloudflare Web Analytics vs Umami vs GoatCounter. Owner decides in Phase 6. Counts only: `resume_uploaded`, `pdf_generated`, `sample_used`.

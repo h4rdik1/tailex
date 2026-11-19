@@ -32,12 +32,19 @@ Each phase: plan mode → approval → build → lint/typecheck/test output past
 
 ## Phase 3 — Providers + key + redaction + extraction + parse
 
-- [ ] Check Gemini official docs (model, JSON mode, auth)
-- [ ] `LlmProvider` interface, Gemini + mock, allowlist
-- [ ] `requireLlmKey` (parse/tailor/key-test only), redacting logger, key log-capture test
-- [ ] PII redaction, PDF/DOCX extraction (memory only, magic bytes)
-- [ ] `parse-v1` prompt (show final text first), Zod validate + retry, id assignment
-- [ ] 3 fictional parse fixtures
+Built on branch `phase-3` while the owner was away (not merged to `main`).
+
+- [x] Check Gemini official docs (model, JSON mode, auth), ADR-027, with open questions listed
+- [x] `LlmProvider` interface, Gemini (REST, no SDK) + mock, allowlist
+- [x] `requireLlmKey` (parse/key-test; tailor in Phase 5), logger, key log-capture test
+- [x] PII redaction (emails, phones, links, handles, name guess) + placeholder restore
+- [x] Upload: raw body ≤ 1 MB, magic bytes, in memory only (ADR-026)
+- [ ] **Owner:** approve `unpdf@2.2.1` + `mammoth@1.13.0` for PDF/DOCX text (ADR-029) ← **waiting**
+- [ ] Wire the real extractor + DOCX zip-bomb cap + extraction tests on real fictional files
+- [x] `parse-v1` + `tailor-v1` stored verbatim (test compares them with SPEC.md), Zod validate + 1 retry, ids
+- [ ] **Owner:** read the final prompt text before the first real Gemini call
+- [x] 3 fictional resume fixtures (redaction)
+- [ ] Try one real call with the owner's own Gemini key (local only) to confirm ADR-027's open points
 
 ## Phase 4 — UI v1
 
