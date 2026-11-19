@@ -39,8 +39,8 @@ Built on branch `phase-3` while the owner was away (not merged to `main`).
 - [x] `requireLlmKey` (parse/key-test; tailor in Phase 5), logger, key log-capture test
 - [x] PII redaction (emails, phones, links, handles, name guess) + placeholder restore
 - [x] Upload: raw body ≤ 1 MB, magic bytes, in memory only (ADR-026)
-- [ ] **Owner:** approve `unpdf@2.2.1` + `mammoth@1.13.0` for PDF/DOCX text (ADR-029) ← **waiting**
-- [ ] Wire the real extractor + DOCX zip-bomb cap + extraction tests on real fictional files
+- [x] **Owner:** approved `unpdf@2.2.1` + `mammoth@1.13.0` for PDF/DOCX text (ADR-029)
+- [x] Real extractor + 10-page PDF cap + DOCX zip-bomb guard + tests on a real fictional PDF and DOCX
 - [x] `parse-v1` + `tailor-v1` stored verbatim (test compares them with SPEC.md), Zod validate + 1 retry, ids
 - [ ] **Owner:** read the final prompt text before the first real Gemini call
 - [x] 3 fictional resume fixtures (redaction)

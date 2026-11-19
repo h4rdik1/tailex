@@ -8,7 +8,10 @@ import { apiNotFound, createErrorHandler } from './middleware/error-handler.ts';
 import { createLogger, requestLogger, type Logger } from './middleware/logger.ts';
 import { compileTex as realCompileTex, type CompileTex } from './services/latex/compile.ts';
 import { createSlotLimiter } from './services/latex/slot-limiter.ts';
-import { unavailableExtractor, type TextExtractor } from './services/extract/extractor.ts';
+import {
+  extractText as realExtractText,
+  type TextExtractor,
+} from './services/extract/extractor.ts';
 import { createGeminiProvider } from './services/llm/gemini.ts';
 import { createMockProvider } from './services/llm/mock.ts';
 import { createProviderRegistry, type ProviderRegistry } from './services/llm/registry.ts';
@@ -27,7 +30,7 @@ export interface AppOptions {
   maxConcurrentCompiles?: number;
   /** LLM providers by name. Default: real Gemini, plus the mock outside production. */
   registry?: ProviderRegistry;
-  /** PDF/DOCX → text. Default: not configured yet (answers 501). */
+  /** PDF/DOCX → text. Default: unpdf + mammoth. */
   extractText?: TextExtractor;
   logger?: Logger;
 }
@@ -50,7 +53,7 @@ export function createApp(options: AppOptions = {}): Express {
   // Upload route first: it reads the raw file body itself (not JSON).
   app.use(
     '/api',
-    createParseRouter({ registry, extractText: options.extractText ?? unavailableExtractor }),
+    createParseRouter({ registry, extractText: options.extractText ?? realExtractText }),
   );
 
   app.use(express.json({ limit: JSON_BODY_LIMIT }));

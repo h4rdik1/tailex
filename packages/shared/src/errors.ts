@@ -15,7 +15,6 @@ export const ErrorCodeSchema = z.enum([
   // Upload and text extraction
   'FILE_TOO_LARGE',
   'UNSUPPORTED_FILE',
-  'EXTRACTION_UNAVAILABLE',
   'TEXT_EXTRACTION_FAILED',
   'TEXT_TOO_LONG',
   // LLM call

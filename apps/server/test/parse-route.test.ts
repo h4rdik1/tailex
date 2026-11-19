@@ -243,14 +243,15 @@ describe('POST /api/parse: upload abuse', () => {
     expect(mock.calls).toHaveLength(0);
   });
 
-  it('answers 501 until a real extractor is configured', async () => {
+  it('with the real extractor, a fake "%PDF-" file is reported as unreadable (422)', async () => {
     const mock = createMockProvider();
     const app = createApp({ registry: createProviderRegistry({ mock }, { allowMock: true }) });
 
-    const res = await upload(app);
+    const res = await upload(app); // PDF_BYTES: right magic bytes, not a real PDF
 
-    expect(res.status).toBe(501);
-    expect(ErrorResponseSchema.parse(res.body).error.code).toBe('EXTRACTION_UNAVAILABLE');
+    expect(res.status).toBe(422);
+    expect(ErrorResponseSchema.parse(res.body).error.code).toBe('TEXT_EXTRACTION_FAILED');
+    expect(mock.calls).toHaveLength(0);
   });
 });
 

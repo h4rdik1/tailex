@@ -1,7 +1,7 @@
 import express, { Router, type Response } from 'express';
 import { makeErrorResponse, UPLOAD_LIMITS, type ParseResponse } from '@tailex/shared';
 import { getLlmContext, requireLlmKey } from '../middleware/require-llm-key.ts';
-import { ExtractionUnavailableError, type TextExtractor } from '../services/extract/extractor.ts';
+import { ExtractionError, type TextExtractor } from '../services/extract/extractor.ts';
 import { detectFileType } from '../services/extract/file-type.ts';
 import type { ProviderRegistry } from '../services/llm/registry.ts';
 import { LlmError, type LlmErrorCode } from '../services/llm/types.ts';
@@ -73,16 +73,9 @@ async function extractOrFail(
   try {
     text = (await extractText(file, type)).trim();
   } catch (error) {
-    if (error instanceof ExtractionUnavailableError) {
-      sendError(
-        res,
-        501,
-        'EXTRACTION_UNAVAILABLE',
-        'File reading is not enabled on this server yet.',
-      );
-    } else {
-      sendError(res, 422, 'TEXT_EXTRACTION_FAILED', 'We could not read text from this file.');
-    }
+    // Unexpected errors (bugs) go to the error handler as 500; known read failures are 422.
+    if (!(error instanceof ExtractionError)) throw error;
+    sendError(res, 422, 'TEXT_EXTRACTION_FAILED', 'We could not read text from this file.');
     return null;
   }
   if (text === '') {

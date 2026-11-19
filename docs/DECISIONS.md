@@ -192,11 +192,13 @@ Short ADRs. Format: **Context · Options · Choice · Tradeoffs.** New decisions
 - **Choice:** `createLogger` writes JSON lines with **only scalar fields we pass explicitly**. There is no API to log a request object, so headers and bodies can't leak by accident. A log-capture test sends a canary key through success, invalid output, a provider error that echoes the key, and a crash.
 - **Tradeoffs:** No log levels config, transports or pretty printing. Fine for Cloud Run, which just collects stdout.
 
-## ADR-029 — PDF/DOCX extraction: dependency proposal (waiting for owner approval)
+## ADR-029 — PDF/DOCX extraction with `unpdf` + `mammoth` (approved by owner)
 
-- **Context:** Reading text from PDFs properly needs a PDF engine. Writing one is out of scope. Rule 3: ask before adding.
-- **Proposal:** `unpdf@2.2.1` (MIT, 0 runtime deps, UnJS, wraps Mozilla's pdf.js for servers, updated 2026-11-15) for PDF, and `mammoth@1.13.0` (BSD-2, updated 2026-09-26) for DOCX (raw text mode). Rejected: `pdf-parse` (pulls a native canvas module), raw `pdfjs-dist` (more setup for the same engine).
-- **Until approved:** `TextExtractor` is an interface; the default answers `501 EXTRACTION_UNAVAILABLE`; tests inject a fake. Zip-bomb protection for DOCX (uncompressed-size cap) gets built with mammoth.
+- **Context:** Reading text from PDFs properly needs a PDF engine. Writing one is out of scope. Rule 3: ask before adding. Owner approved both on 2026-11-20.
+- **Choice:** `unpdf@2.2.1` (MIT, 0 runtime deps, UnJS, wraps Mozilla's pdf.js for servers) for PDF, and `mammoth@1.13.0` (BSD-2) for DOCX (raw text mode). Both pinned exactly, both read from memory. Rejected: `pdf-parse` (pulls a native canvas module), raw `pdfjs-dist` (more setup for the same engine).
+- **Our own limits around them:** PDF ≤ 10 pages; DOCX goes through `checkZipLimits` first (≤ 10 MB unpacked, ≤ 500 files, no ZIP64, damaged directories rejected), a zip-bomb guard written against the ZIP spec with no extra dependency; 10 s timeout on waiting for extraction.
+- **Tradeoffs:** pdf.js is a large engine (more code we trust). Residual risk: a ZIP can _lie_ about its uncompressed size in the directory; the 1 MB upload cap, the time limit and Cloud Run's memory limit bound the damage. `isEvalSupported` (the 2024 pdf.js CVE switch) no longer exists in this pdf.js build because the eval path was removed upstream.
+- **Lesson:** a lockfile generated on Windows dropped Linux-only optional packages, so `npm ci` failed in Docker. The lockfile is now refreshed inside the Linux container; CI's Linux `npm ci` guards against a repeat.
 
 ## ADR-030 — Redaction heuristics and placeholder restore
 

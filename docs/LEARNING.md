@@ -245,7 +245,8 @@ POST /api/parse   headers: x-llm-provider, x-llm-key   body: the raw PDF/DOCX by
   │                                  stores {provider, key} in a WeakMap tied to THIS request
   ├─ express.raw (≤ 1 MB)            413 FILE_TOO_LARGE if bigger; kept in memory
   ├─ extract/file-type.ts            magic bytes: %PDF- or ZIP+word/document.xml → else 415
-  ├─ extract/extractor.ts            bytes → text (pending dependency approval → 501 for now)
+  ├─ extract/zip-limits.ts           DOCX only: read the ZIP's table of contents, refuse bombs
+  ├─ extract/extractor.ts            bytes → text: unpdf (PDF, ≤ 10 pages) or mammoth (DOCX)
   ├─ redact/redact-contact.ts        email/phone/links/handles/name → [EMAIL] [PHONE] [LINK] [NAME]
   ├─ prompts/parse.ts                system prompt parse-v1 + "<resume_text>…</resume_text>"
   ├─ llm/gemini.ts                   ONE call, JSON mode, temperature 0, key in a header
@@ -272,6 +273,22 @@ POST /api/parse   headers: x-llm-provider, x-llm-key   body: the raw PDF/DOCX by
 - **Tag breakout.** The resume text could contain `</resume_text>` to "end" the data block and
   pose as instructions. We strip those tags from the text before wrapping it.
 - **Redaction is best-effort.** Regexes catch common formats; the UI shows exactly what was sent.
+
+### Zip bombs, in plain words
+
+A DOCX is really a ZIP file. ZIP compresses repeated data extremely well, so a 20 KB file can
+unpack into 10 GB of zeros and exhaust the server's memory: a **zip bomb**. Before mammoth unpacks
+anything, `zip-limits.ts` reads the ZIP's table of contents (the "central directory" at the end of
+the file), adds up the sizes each file _says_ it will unpack to, and refuses anything over 10 MB.
+The test builds a real bomb in memory: 10 MB of zeros compresses to well under the 1 MB upload
+limit, passes the upload check, and is stopped by the zip check.
+
+### A lockfile lesson
+
+`npm install` on Windows wrote a `package-lock.json` that was missing a few Linux-only optional
+packages, so `npm ci` failed inside Docker. Running `npm install --package-lock-only` inside the
+Linux container fixed it. Takeaway: **run `npm ci` in the same OS as production** (Docker and CI
+both do) before trusting a lockfile.
 
 ### Interview Q&A (Phase 3)
 
