@@ -26,16 +26,16 @@ We **never** add skills the user didn't confirm. Users **never** submit raw LaTe
 Auth, database, payments, multiple templates, cover letters, saved resumes, server-side key storage, any LLM call using the owner's own key, agent loops or tool use.
 
 ## Workflow rules
-1. Work one phase at a time (see PROGRESS.md). **Plan mode first**, then wait for approval of the plan.
+1. Work one phase at a time (see docs/PROGRESS.md). **Plan mode first**, then wait for approval of the plan.
 2. After each phase: run lint, typecheck and tests, **paste the real output**, summarize the changes, list uncertainties, STOP for review. One conventional commit per phase.
 3. **Dependencies:** ask before adding any. State why, confirm it exists and is maintained, **pin exact versions**. Prefer the standard library.
 4. Never edit a test just to make it pass without saying why. Never say something works unless it was run.
-5. Log every non-trivial decision in DECISIONS.md ("why X over Y").
+5. Log every non-trivial decision in docs/DECISIONS.md ("why X over Y").
 6. **The owner hand-writes** `escapeLatex`, `truthGuard` and the `useApiKey` hook. When you reach one, write its spec + tests first, then STOP and wait.
 7. Before using any LLM provider API, check its **current official docs** (model names, JSON/structured output, auth). Don't rely on memory.
 8. Ask before choosing analytics (Cloudflare Web Analytics / Umami / GoatCounter). Counts only, no content.
 
-## Security musts (details in SECURITY.md)
+## Security musts (details in docs/SECURITY.md)
 - BYOK: the key lives in browser memory. Optional "Remember on this device" (off by default) saves it to localStorage. "Clear key" removes it from both. **No cookies.**
 - One helper (`apps/web/src/lib/api-client.ts`) adds `x-llm-key` + `x-llm-provider` headers. Never put the key in a URL, query or body.
 - Only `/api/parse`, `/api/tailor` and `/api/key/test` read `x-llm-key`.
@@ -53,4 +53,4 @@ Auth, database, payments, multiple templates, cover letters, saved resumes, serv
 - **The repo is public.** The sample resume and **all test fixtures use fictional people only**: never the owner's real name, phone, email, links or resume content.
 
 ## Prompts
-Runtime prompts live only in `apps/server/src/prompts/parse.ts` (`parse-v1`) and `tailor.ts` (`tailor-v1`) as versioned constants, stored verbatim from SPEC.md. Never in the browser. Single call, JSON mode, temperature 0–0.3. Show the final prompt text before first use.
+Runtime prompts live only in `apps/server/src/prompts/parse.ts` (`parse-v1`) and `tailor.ts` (`tailor-v1`) as versioned constants, stored verbatim from docs/SPEC.md. Never in the browser. Single call, JSON mode, temperature 0–0.3. Show the final prompt text before first use.

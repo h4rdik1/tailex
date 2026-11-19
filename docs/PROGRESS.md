@@ -3,7 +3,7 @@
 Each phase: plan mode → approval → build → lint/typecheck/test output pasted → review → one conventional commit.
 
 ## Phase 0 — Docs ✅
-- [x] CLAUDE.md, README.md, SPEC.md, ARCHITECTURE.md, DECISIONS.md, SECURITY.md, TESTING.md, PROGRESS.md
+- [x] CLAUDE.md + README.md at root; SPEC, ARCHITECTURE, DECISIONS, SECURITY, TESTING, PROGRESS in `docs/`
 - [x] .gitignore, .gitattributes, .editorconfig, LICENSE (MIT)
 - [x] Stack updated (React + Vite, Node 24) and name chosen (Tailex), both logged as ADRs
 - [x] Commit `docs: add phase 0 project docs`

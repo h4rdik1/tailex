@@ -4,7 +4,7 @@
 
 Upload a resume (PDF/DOCX) and get a clean, one-page, ATS-friendly PDF from a typeset LaTeX template. Then paste a job description: Tailex shows which skills you're missing, adds only the ones **you confirm** you have, and suggests bullet rewrites you accept or reject one by one. A code-level truth guard blocks any suggestion that adds skills, tools, employers or numbers you never wrote.
 
-**Live demo:** _coming soon_ · **Status:** Phase 0 (design docs). See [PROGRESS.md](PROGRESS.md).
+**Live demo:** _coming soon_ · **Status:** Phase 0 (design docs). See [PROGRESS.md](docs/PROGRESS.md).
 
 ## Features
 - PDF/DOCX upload → structured, editable resume data
@@ -28,7 +28,7 @@ flowchart LR
   B -- edited resume, no key --> T[escapeLatex → template → pdflatex sandbox]
   T -- PDF --> B
 ```
-More detail in [ARCHITECTURE.md](ARCHITECTURE.md). Decisions and tradeoffs in [DECISIONS.md](DECISIONS.md).
+More detail in [ARCHITECTURE.md](docs/ARCHITECTURE.md). Decisions and tradeoffs in [DECISIONS.md](docs/DECISIONS.md).
 
 ## Privacy
 - **We store nothing.** No accounts, no database, no saved resumes. Uploads are processed in memory and never written to disk.
@@ -44,7 +44,7 @@ More detail in [ARCHITECTURE.md](ARCHITECTURE.md). Decisions and tradeoffs in [D
 4. Only three endpoints read it: `/api/parse`, `/api/tailor`, `/api/key/test`.
 5. The server maps the provider **name** to a hardcoded host (no client-supplied URLs), makes one call, and discards the key. It is never stored, logged, or included in errors.
 
-Threat model: [SECURITY.md](SECURITY.md).
+Threat model: [SECURITY.md](docs/SECURITY.md).
 
 ## Tech stack
 React 19 · Vite · TypeScript (strict) · Tailwind v4 · shadcn/ui (Radix) · Node 24 · Express · Zod · pdflatex (TeX Live) · Vitest · supertest · Playwright · Docker · GitHub Actions · Google Cloud Run
@@ -57,7 +57,7 @@ npm run dev
 ```
 
 ## Docs
-[SPEC](SPEC.md) · [ARCHITECTURE](ARCHITECTURE.md) · [DECISIONS](DECISIONS.md) · [SECURITY](SECURITY.md) · [TESTING](TESTING.md) · [PROGRESS](PROGRESS.md)
+[SPEC](docs/SPEC.md) · [ARCHITECTURE](docs/ARCHITECTURE.md) · [DECISIONS](docs/DECISIONS.md) · [SECURITY](docs/SECURITY.md) · [TESTING](docs/TESTING.md) · [PROGRESS](docs/PROGRESS.md)
 
 ## License
 [MIT](LICENSE)
