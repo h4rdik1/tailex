@@ -1,8 +1,19 @@
 @import 'tailwindcss';
 
-/* Theme: zinc neutrals (Tailwind defaults) + emerald accent + a monospace stack for accents.
-   Dark mode follows the OS for now; a manual toggle arrives in Phase 4. */
+/* Dark mode follows a `dark` class on <html> (set by the theme toggle, default = system). */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* Theme: zinc neutrals (Tailwind defaults) + emerald accent + a monospace stack for accents. */
 @theme {
   --font-mono:
     ui-monospace, 'Cascadia Code', 'JetBrains Mono', SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
 }
