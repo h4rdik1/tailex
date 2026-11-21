@@ -318,6 +318,80 @@ both do) before trusting a lockfile.
 
 ---
 
+## Phase 4 — The React app (v1)
+
+### How the page is put together
+
+`App.tsx` is the only place that holds the app's data. Everything else gets it through props:
+
+| State                | Lives in                    | What it is                                  |
+| -------------------- | --------------------------- | ------------------------------------------- |
+| the API key          | `useApiKey()` (called once) | key, provider, remember                     |
+| which step you're on | `useReducer(stepsReducer)`  | current step + furthest step reached        |
+| the resume           | `useReducer(resumeReducer)` | the full `ResumeData` being edited          |
+| the PDF              | `usePdfRender(api.render)`  | idle / rendering / ready (blob URL) / error |
+
+The flow: **Upload** (or "Try with a sample resume") → `api.parse(file)` → `replace` the resume →
+**Review** (edit the form) → **Preview** (build the PDF) → **Export** (download).
+
+### `useApiKey`, in plain words
+
+Two directions:
+
+1. **Memory → storage (when you change something).** One rule, `syncStorage`: "if remember is on
+   and there is a key, save `{provider, key}`; otherwise delete the saved copy".
+2. **Storage → memory (once, when the page loads).** `readStored()` reads the saved text,
+   `parseStored()` checks it (real JSON? an object? a provider we allow? a non-empty key?) and deletes
+   it if it's broken. `useState(readStored)` (the function, not `readStored()`) runs it only on the
+   first render.
+
+Every storage call is inside `try/catch`, because private browsing can make `localStorage` throw.
+
+**The React gotcha you met:** after `setKeyState(trimmed)`, the variable `key` still holds the
+**old** value until React renders again. That's why the setters pass the new value straight to
+`syncStorage(trimmed, remember)` instead of reading `key`.
+
+### Reducers: edits as data
+
+`resumeReducer(state, action)` takes the current resume and an action like
+`{ type: 'setBullet', section: 'experience', entryId: 'exp0', id: 'exp0-b1', text: '…' }` and
+returns a **new** resume. It never changes the old one. That gives three things:
+
+- tests without a browser (`resume-reducer.test.ts`);
+- "Out of date" for free: a new object after every edit means `pdf.source !== resume`;
+- React re-renders only what changed, because untouched parts are the same objects.
+
+### The PDF preview
+
+The server sends PDF bytes. `URL.createObjectURL(blob)` turns them into a temporary `blob:` address
+the `<iframe>` can show. Each new PDF **revokes** the previous address so old PDFs don't pile up in
+memory. If the server says `503 BUSY` (both pdflatex slots in use), the hook waits 1.5 s and tries
+**once** more. If you click twice quickly, only the newest answer is shown.
+
+### Accessibility checklist we followed
+
+- Every input has a `<Label htmlFor>` (via `useId`), and every icon button has an `aria-label`
+  ("Move Job 1 bullet 2 up").
+- When the step changes, focus moves to the new step's heading (`tabIndex={-1}`).
+- Status changes are announced with `aria-live` / `role="status"`; errors with `role="alert"`.
+- Real `<button>`s, native `<select>` and `<details>`: keyboard support with no extra code.
+- A "Skip to content" link, visible focus rings, and `prefers-reduced-motion` respected.
+
+### Interview Q&A (Phase 4)
+
+- **Why is the key in React state and not a cookie?** Cookies are sent with every request
+  automatically; we want the key only in one header, on three endpoints, and only when we choose.
+- **Why does `App` call `useApiKey` once?** Each call has its own state. Two calls would mean two
+  keys that can disagree; one call and props give one source of truth.
+- **Why validate localStorage?** It's input we don't control (old versions, DevTools edits).
+  Treat it like an API response: parse safely, check with Zod, delete if broken.
+- **Why not re-render the PDF on every keystroke?** pdflatex takes about a second and the server
+  allows two at a time; a button plus an "Out of date" badge is cheaper and still clear.
+- **How do you stop an old slow request from overwriting a newer one?** A request counter in a
+  ref: each render takes a number, and only the latest number may update state.
+
+---
+
 ## Commands cheat sheet
 
 ```bash

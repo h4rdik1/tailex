@@ -49,12 +49,12 @@ Built on branch `phase-3` while the owner was away (not merged to `main`).
 
 ## Phase 4 — UI v1
 
-- [ ] **Owner:** `useApiKey` hook (spec + tests first, then wait)
-- [ ] Layout, theme (zinc + emerald, light/dark), stepper
-- [ ] Key card (collapsible, badge, test, remember, clear)
-- [ ] Upload + "See what's sent" + review form
-- [ ] PDF preview (split view / mobile tabs), cold-start state
-- [ ] Sample mode → **v1**
+- [x] **Owner:** `useApiKey` hook (spec + tests first; owner wrote steps 1–2, assistant finished step 3 on request, ADR-035)
+- [x] Layout, theme (zinc + emerald, light/dark), stepper
+- [x] Key card (collapsible, badge, test, remember, clear)
+- [x] Upload + "See what's sent" + review form
+- [x] PDF preview (split view / mobile tabs), cold-start state
+- [x] Sample mode → **v1**
 
 ## Phase 5 — Tailoring (v1.1)
 

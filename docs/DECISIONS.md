@@ -215,6 +215,28 @@ Short ADRs. Format: **Context · Options · Choice · Tradeoffs.** New decisions
 - **Choice:** `toProviderJsonSchema` strips `maxLength`, `minLength`, `maxItems`, `minItems`, `pattern` (and `$schema`) from `z.toJSONSchema(...)`. The provider gets the **shape** (fields, types, required, no extra properties); **Zod still enforces every limit** on the answer.
 - **Tradeoffs:** The model might produce an over-long field, which Zod then rejects (one retry, then a clear error). That's the right place for the check anyway: provider features are not security.
 
+## ADR-032 — Hand-written shadcn-style components on `radix-ui` (approved by owner)
+
+- **Choice:** One `radix-ui` package (Collapsible, Checkbox, Tabs, Label, Slot) for keyboard/focus/ARIA behaviour, styled with Tailwind in ~8 small files. No shadcn CLI, no `class-variance-authority` (plain variant maps), no toast library (one `aria-live` region per place that changes).
+- **Tradeoffs:** A bit more code than the generated components, but every line is ours and explainable. Native elements (`<select>`, `<details>`) are used where they are already accessible.
+
+## ADR-033 — Resume edits as a reducer, ids created outside it
+
+- **Choice:** The review form is fully controlled; every change is a typed action for `resumeReducer` (a pure function, unit-tested without a browser). New ids (`exp-1a2b3c4d`) are made by the caller with `crypto.randomUUID()` and passed in the action, so the reducer stays pure (React StrictMode may run reducers twice).
+- **Why not a form library:** The data is one nested object with a shared Zod schema; a reducer plus `ResumeDataSchema.safeParse` gives validation and editing in plain React.
+- **Comma lists** (skills, tech) keep a local draft and are split on blur, so typing a comma is never swallowed.
+
+## ADR-034 — PDF preview: blob URL, manual "Update preview", one BUSY retry
+
+- **Choice:** `/api/render` returns the PDF; the browser shows it from a `blob:` URL in an `<iframe>`. The old URL is revoked on every new PDF and on unmount. Rebuilding is a button ("Update preview", with an "Out of date" badge) rather than on every keystroke, which keeps pdflatex load low on a 1–2 instance server. A `503 BUSY` is retried once after 1.5 s; only the newest request may update the screen.
+- **Follow-up for Phase 6:** the CSP must allow `frame-src blob:` (and nothing wider) for this iframe.
+- **Layout:** side by side at ≥ 1024 px, Edit/Preview tabs below, chosen with `useMediaQuery` (`useSyncExternalStore`) so the form is mounted only once.
+
+## ADR-035 — `useApiKey` authorship
+
+- **Context:** CLAUDE.md rule 6 says the owner hand-writes `useApiKey`.
+- **What happened:** The owner wrote the in-memory state, trimming, the remember/clear logic and the storage write/remove helpers against the spec and tests. At the owner's request, the assistant then finished the last step: reading the stored key on load (`readStored` + `parseStored` with `PublicProviderSchema`, lazy `useState`) and `setProvider`.
+
 ## Pending
 
 - **Analytics:** Cloudflare Web Analytics vs Umami vs GoatCounter. Owner decides in Phase 6. Counts only: `resume_uploaded`, `pdf_generated`, `sample_used`.

@@ -53,11 +53,12 @@ export interface RenderedPdf {
   droppedChars: string[];
 }
 
+/** Plain functions (no `this`), so they can be passed around, e.g. `testKey={api.testKey}`. */
 export interface ApiClient {
-  health(): Promise<boolean>;
-  testKey(): Promise<void>;
-  parse(file: Blob): Promise<ParseResponse>;
-  render(resume: ResumeData, spacing: Spacing): Promise<RenderedPdf>;
+  health: () => Promise<boolean>;
+  testKey: () => Promise<void>;
+  parse: (file: Blob) => Promise<ParseResponse>;
+  render: (resume: ResumeData, spacing: Spacing) => Promise<RenderedPdf>;
 }
 
 export function createApiClient(keys: KeySource, fetchFn: typeof fetch = fetch): ApiClient {
