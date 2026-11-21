@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { guessLocation, redactContact } from '../src/services/redact/redact-contact.ts';
+import { guessLocation, guessName, redactContact } from '../src/services/redact/redact-contact.ts';
 
 /** Fictional people only (CLAUDE.md): example.com / example.org and non-working numbers. */
 const HEADER = (contactLine: string) => `Asha Testwala\n${contactLine}\n\nExperience\nEngineer`;
@@ -118,10 +118,82 @@ describe('guessLocation', () => {
     expect(guessLocation(text)).toBe('');
   });
 
-  it('does not read past the first 4 header lines', () => {
-    const text = '[NAME]\nline two\nline three\nline four\nPune, India | [EMAIL]';
+  it('does not read past the first 8 header lines', () => {
+    const filler = Array.from({ length: 8 }, (_, i) => `line ${String(i)}`).join('\n');
+
+    expect(guessLocation(`[NAME]\n${filler}\nPune, India | [EMAIL]`)).toBe('');
+  });
+
+  it('reads a sidebar CONTACT block: name, title, heading, details, then the place', () => {
+    const text = [
+      '[NAME]',
+      'Master Tailor',
+      'CONTACT',
+      '[PHONE]',
+      '[EMAIL]',
+      'Springfield, Exampleland, Westbury',
+      'EDUCATION',
+      'Certificate in Tailoring, Example Academy, Westbury',
+    ].join('\n');
+
+    expect(guessLocation(text)).toBe('Springfield, Exampleland, Westbury');
+  });
+
+  it('stops at the first real section heading, so a school city is not the location', () => {
+    const text = '[NAME]\nMaster Tailor\nEDUCATION\nExample Academy, Westbury, Exampleland';
 
     expect(guessLocation(text)).toBe('');
+  });
+});
+
+describe('guessName and redaction: a name printed over two lines', () => {
+  const sidebarText = [
+    'Mara',
+    'Fictional',
+    'Master Tailor',
+    'CONTACT',
+    '(445) 678-1234',
+    'mara.fictional@example.com',
+    'Springfield, Exampleland, Westbury',
+    'EDUCATION',
+    '2000 - 2002',
+  ].join('\n');
+
+  it('joins two single-word lines into the name', () => {
+    expect(guessName(sidebarText)).toBe('Mara Fictional');
+  });
+
+  it('redacts the name even though it is split over two lines (no leak to the LLM)', () => {
+    const { redactedText, contact } = redactContact(`${sidebarText}\nMara Fictional wrote this.`);
+
+    expect(contact.name).toBe('Mara Fictional');
+    expect(redactedText).not.toMatch(/Mara|Fictional/);
+    expect(redactedText.startsWith('[NAME]\nMaster Tailor')).toBe(true);
+  });
+
+  it('also fills the whole contact block of this sidebar layout', () => {
+    const { contact } = redactContact(sidebarText);
+
+    expect(contact).toMatchObject({
+      name: 'Mara Fictional',
+      email: 'mara.fictional@example.com',
+      phone: '(445) 678-1234',
+      location: 'Springfield, Exampleland, Westbury',
+    });
+  });
+
+  it.each([
+    ['two section headings', 'CONTACT\nEDUCATION\nSomething'],
+    ['a heading and a name word', 'Experience\nHamilton'],
+    ['a lowercase second line', 'Mara\nfictional'],
+    ['a first line that is a sentence', 'Mara builds things\nFictional'],
+    ['a single word only', 'Mara'],
+  ])('does not invent a name from %s', (_name, text) => {
+    expect(guessName(text)).toBe('');
+  });
+
+  it('keeps the existing rule: a normal one-line name still works', () => {
+    expect(guessName('Asha Testwala\nPune, India')).toBe('Asha Testwala');
   });
 });
 

@@ -140,6 +140,11 @@ const NOT_A_PLACE = new Set([
  */
 const PLACE_SHAPE = /^\p{Lu}[\p{L}\s.'-]*(?:,\s*\p{Lu}[\p{L}\s.'-]*)*(?:\s+\d{5,6})?$/u;
 
+/** Designed templates put name, title, a CONTACT heading and the details in a sidebar. */
+const CONTACT_HEADING =
+  /^(contact|contact (information|details|info)|personal (details|information))$/i;
+const HEADER_MAX_LINES = 8;
+
 /**
  * The location is almost always in the header, next to the phone and email: "Bangalore, Karnataka
  * | [PHONE] | [EMAIL]". After redaction the placeholders and "|" separators cut that line into
@@ -152,7 +157,9 @@ export function guessLocation(redactedText: string): string {
   for (const rawLine of redactedText.split(/\r?\n/)) {
     const line = rawLine.trim();
     if (line === '') continue;
-    if (SECTION_HEADING.test(line) || headerLines.length >= 4) break;
+    // A "CONTACT" heading starts the contact block, which is part of the header, so skip it.
+    if (CONTACT_HEADING.test(line)) continue;
+    if (SECTION_HEADING.test(line) || headerLines.length >= HEADER_MAX_LINES) break;
     headerLines.push(line);
   }
 
@@ -189,22 +196,39 @@ function looksLikePhone(candidate: string): boolean {
   return !groups.every((group) => /^(19|20)\d{2}$/.test(group));
 }
 
+const isNameWord = (word: string): boolean => /^\p{Lu}[\p{L}'.-]*$/u.test(word);
+
+/** "EDUCATION", "Contact", "Resume": a heading is never half of a name. */
+function isHeadingWord(word: string): boolean {
+  return (
+    NON_NAME_FIRST_LINES.has(word.toLowerCase()) ||
+    SECTION_HEADING.test(word) ||
+    CONTACT_HEADING.test(word) ||
+    /^contact/i.test(word)
+  );
+}
+
 /**
  * A resume usually starts with the person's name: 2–4 capitalised words, letters only.
- * If the first line doesn't look like that, we don't guess (the user fills it in on review).
+ * Designed templates often print a big name over two lines ("Leonard" / "Hamilton"), so two
+ * lines of one capitalised word each also count. If the start doesn't look like a name we don't
+ * guess (the user fills it in on review).
  */
 export function guessName(text: string): string {
-  const firstLine = text
+  const [first, second] = text
     .split(/\r?\n/)
     .map((line) => line.trim())
-    .find((line) => line !== '');
-  if (firstLine === undefined) return '';
-  if (NON_NAME_FIRST_LINES.has(firstLine.toLowerCase())) return '';
+    .filter((line) => line !== '');
+  if (first === undefined) return '';
+  if (NON_NAME_FIRST_LINES.has(first.toLowerCase())) return '';
 
-  const words = firstLine.split(/\s+/);
-  const isNameWord = (word: string): boolean => /^\p{Lu}[\p{L}'.-]*$/u.test(word);
-  if (words.length < 2 || words.length > 4 || !words.every(isNameWord)) return '';
-  return firstLine;
+  const words = first.split(/\s+/);
+  if (words.length >= 2 && words.length <= 4 && words.every(isNameWord)) return first;
+
+  const isSingleNameWord = (line: string | undefined): line is string =>
+    line !== undefined && !/\s/.test(line) && isNameWord(line) && !isHeadingWord(line);
+  if (isSingleNameWord(first) && isSingleNameWord(second)) return `${first} ${second}`;
+  return '';
 }
 
 const SITE_NAMES: Record<string, string> = {
@@ -270,7 +294,11 @@ function trailingPunctuation(url: string): string {
   return TRAILING_PUNCTUATION.exec(url)?.[0] ?? '';
 }
 
+/** Any run of whitespace in the search matches any whitespace, so a name split over two lines is found. */
 function replaceAllCaseInsensitive(text: string, search: string, replacement: string): string {
-  const escaped = search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const escaped = search
+    .split(/\s+/)
+    .map((word) => word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
+    .join('\\s+');
   return text.replace(new RegExp(escaped, 'gi'), replacement);
 }
