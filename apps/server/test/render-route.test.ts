@@ -72,9 +72,27 @@ describe('POST /api/render: rendering (needs escapeLatex)', () => {
     expect(res.status).toBe(200);
     expect(res.headers['content-type']).toBe('application/pdf');
     expect(res.headers[RENDER_HEADERS.pageCount]).toBe('1');
+    expect(res.headers[RENDER_HEADERS.layout]).toBe('roomy'); // fits at once: roomiest layout
+    expect(res.headers[RENDER_HEADERS.pageFill]).toBeUndefined(); // the fake log has no marker
     expect(JSON.parse(decodeURIComponent(String(res.headers[RENDER_HEADERS.warnings])))).toEqual([
       '🚀',
     ]);
+  });
+
+  it('sends the measured page fill as a whole percentage', async () => {
+    const { compileTex } = fakeCompiler({
+      ok: true,
+      pdf: Buffer.from('%PDF-fake'),
+      pageCount: 1,
+      log: 'TAILEX-FILL 313.7pt 600.0pt',
+    });
+
+    const res = await request(createApp({ compileTex }))
+      .post('/api/render')
+      .send({ resume: FICTIONAL_RESUME, spacing: 'tight' }); // old clients' field is ignored
+
+    expect(res.status).toBe(200);
+    expect(res.headers[RENDER_HEADERS.pageFill]).toBe('52');
   });
 
   it('never reads the LLM key: it does not reach the .tex or the response', async () => {

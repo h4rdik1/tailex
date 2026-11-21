@@ -1,8 +1,8 @@
 import { Download, ExternalLink, RefreshCw } from 'lucide-react';
-import type { Spacing } from '@tailex/shared';
 import { Button } from '../../components/ui/button.tsx';
 import { Card, CardContent } from '../../components/ui/card.tsx';
 import { Badge } from '../../components/ui/misc.tsx';
+import { LAYOUT_LABELS, pdfHint } from './pdf-hints.ts';
 import type { RenderState } from './usePdfRender.ts';
 
 export const PDF_FILE_NAME = 'resume.pdf';
@@ -12,23 +12,20 @@ interface PdfPanelProps {
   outOfDate: boolean;
   /** Schema problems block rendering: the server would reject the request anyway. */
   blocked: boolean;
-  onRender: (spacing: Spacing) => void;
+  onRender: () => void;
 }
 
-/** The PDF side of the preview: build button, warnings, errors and the PDF itself. */
+/**
+ * The PDF side of the preview: build button, warnings, errors and the PDF itself.
+ * The server picks the layout (roomiest that fits one page), so there is no spacing control.
+ */
 export function PdfPanel({ state, outOfDate, blocked, onRender }: PdfPanelProps) {
-  const spacing: Spacing = state.status === 'ready' ? state.spacing : 'normal';
+  const hint = state.status === 'ready' ? pdfHint(state) : null;
 
   return (
     <div className="flex flex-col gap-3">
       <div className="flex flex-wrap items-center gap-2">
-        <Button
-          size="sm"
-          disabled={blocked || state.status === 'rendering'}
-          onClick={() => {
-            onRender(spacing);
-          }}
-        >
+        <Button size="sm" disabled={blocked || state.status === 'rendering'} onClick={onRender}>
           <RefreshCw className="size-4" aria-hidden="true" />
           {state.status === 'idle' ? 'Build PDF' : 'Update preview'}
         </Button>
@@ -36,6 +33,7 @@ export function PdfPanel({ state, outOfDate, blocked, onRender }: PdfPanelProps)
         {state.status === 'ready' && (
           <Badge tone={state.pageCount === 1 ? 'success' : 'warning'}>
             {state.pageCount === 1 ? '1 page' : `${String(state.pageCount)} pages`}
+            {state.layout && ` · ${LAYOUT_LABELS[state.layout]} layout`}
           </Badge>
         )}
       </div>
@@ -85,23 +83,16 @@ export function PdfPanel({ state, outOfDate, blocked, onRender }: PdfPanelProps)
 
       {state.status === 'ready' && (
         <>
-          {state.pageCount > 1 && (
-            <div className="flex flex-wrap items-center gap-2 rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-300">
-              <span>Your resume is longer than one page.</span>
-              {state.spacing === 'normal' ? (
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  onClick={() => {
-                    onRender('tight');
-                  }}
-                >
-                  Tighten spacing
-                </Button>
-              ) : (
-                <span>Try shortening or removing some bullets.</span>
-              )}
-            </div>
+          {hint && (
+            <p
+              className={
+                hint.tone === 'warning'
+                  ? 'rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-300'
+                  : 'rounded-md border border-zinc-200 bg-zinc-50 p-3 text-sm text-zinc-700 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-300'
+              }
+            >
+              {hint.text}
+            </p>
           )}
           {state.droppedChars.length > 0 && (
             <p className="rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-300">

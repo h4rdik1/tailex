@@ -7,7 +7,8 @@ import { usePdfRender } from './usePdfRender.ts';
 const FAST = { busyRetryMs: 1 };
 
 function pdfResult(pageCount = 1): RenderedPdf {
-  return { pdf: new Blob(['%PDF-'], { type: 'application/pdf' }), pageCount, droppedChars: [] };
+  const pdf = new Blob(['%PDF-'], { type: 'application/pdf' });
+  return { pdf, pageCount, droppedChars: [], layout: 'comfortable', fill: 0.9 };
 }
 
 // jsdom has no blob URLs, so we provide simple fakes and count calls.
@@ -28,22 +29,22 @@ describe('usePdfRender', () => {
     const renderPdf = vi.fn(() => Promise.resolve(pdfResult(2)));
     const { result } = renderHook(() => usePdfRender(renderPdf, FAST));
 
-    await act(() => result.current.render(FICTIONAL_RESUME, 'normal'));
+    await act(() => result.current.render(FICTIONAL_RESUME));
 
     expect(result.current.state).toMatchObject({
       status: 'ready',
       url: 'blob:test/1',
       pageCount: 2,
     });
-    expect(renderPdf).toHaveBeenCalledWith(FICTIONAL_RESUME, 'normal');
+    expect(renderPdf).toHaveBeenCalledWith(FICTIONAL_RESUME);
   });
 
   it('revokes the previous URL when a new PDF arrives, and the last one on unmount', async () => {
     const renderPdf = vi.fn(() => Promise.resolve(pdfResult()));
     const { result, unmount } = renderHook(() => usePdfRender(renderPdf, FAST));
 
-    await act(() => result.current.render(FICTIONAL_RESUME, 'normal'));
-    await act(() => result.current.render(FICTIONAL_RESUME, 'tight'));
+    await act(() => result.current.render(FICTIONAL_RESUME));
+    await act(() => result.current.render(FICTIONAL_RESUME));
     expect(revokeObjectURL).toHaveBeenCalledWith('blob:test/1');
 
     unmount();
@@ -57,7 +58,7 @@ describe('usePdfRender', () => {
       .mockResolvedValueOnce(pdfResult());
     const { result } = renderHook(() => usePdfRender(renderPdf, FAST));
 
-    await act(() => result.current.render(FICTIONAL_RESUME, 'normal'));
+    await act(() => result.current.render(FICTIONAL_RESUME));
 
     expect(renderPdf).toHaveBeenCalledTimes(2);
     expect(result.current.state.status).toBe('ready');
@@ -67,7 +68,7 @@ describe('usePdfRender', () => {
     const renderPdf = vi.fn(() => Promise.reject(new ApiError('BUSY', 503)));
     const { result } = renderHook(() => usePdfRender(renderPdf, FAST));
 
-    await act(() => result.current.render(FICTIONAL_RESUME, 'normal'));
+    await act(() => result.current.render(FICTIONAL_RESUME));
 
     expect(renderPdf).toHaveBeenCalledTimes(2);
     expect(result.current.state).toMatchObject({ status: 'error' });
@@ -77,7 +78,7 @@ describe('usePdfRender', () => {
     const renderPdf = vi.fn(() => Promise.reject(new ApiError('COMPILE_FAILED', 422, [])));
     const { result } = renderHook(() => usePdfRender(renderPdf, FAST));
 
-    await act(() => result.current.render(FICTIONAL_RESUME, 'normal'));
+    await act(() => result.current.render(FICTIONAL_RESUME));
 
     expect(renderPdf).toHaveBeenCalledTimes(1);
     const { state } = result.current;
@@ -99,14 +100,14 @@ describe('usePdfRender', () => {
 
     let first: Promise<void> = Promise.resolve();
     act(() => {
-      first = result.current.render(FICTIONAL_RESUME, 'normal');
+      first = result.current.render(FICTIONAL_RESUME);
     });
-    await act(() => result.current.render(FICTIONAL_RESUME, 'tight'));
+    await act(() => result.current.render(FICTIONAL_RESUME));
     await act(async () => {
       finishFirst(pdfResult(5));
       await first;
     });
 
-    expect(result.current.state).toMatchObject({ status: 'ready', pageCount: 1, spacing: 'tight' });
+    expect(result.current.state).toMatchObject({ status: 'ready', pageCount: 1 });
   });
 });

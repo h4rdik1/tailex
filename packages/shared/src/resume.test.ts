@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { RESUME_LIMITS, ResumeDataSchema, SAFE_URL_PATTERN } from './resume.ts';
-import { RenderRequestSchema } from './render.ts';
+import { LayoutSchema, RenderRequestSchema } from './render.ts';
 import { FICTIONAL_RESUME } from './samples/fictional-resume.ts';
 
 describe('ResumeDataSchema', () => {
@@ -48,16 +48,17 @@ describe('SAFE_URL_PATTERN', () => {
   });
 });
 
+// The client no longer chooses spacing: the server picks a layout (ADR-036).
 describe('RenderRequestSchema', () => {
-  it('defaults spacing to normal', () => {
-    const parsed = RenderRequestSchema.parse({ resume: FICTIONAL_RESUME });
+  it('accepts just the resume and drops an old "spacing" field', () => {
+    const parsed = RenderRequestSchema.parse({ resume: FICTIONAL_RESUME, spacing: 'tight' });
 
-    expect(parsed.spacing).toBe('normal');
+    expect(parsed).toEqual({ resume: FICTIONAL_RESUME });
   });
+});
 
-  it('rejects unknown spacing values', () => {
-    const result = RenderRequestSchema.safeParse({ resume: FICTIONAL_RESUME, spacing: 'huge' });
-
-    expect(result.success).toBe(false);
+describe('LayoutSchema', () => {
+  it('lists layouts from roomiest to densest (the auto-fit order)', () => {
+    expect(LayoutSchema.options).toEqual(['roomy', 'spacious', 'comfortable', 'compact', 'dense']);
   });
 });

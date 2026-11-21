@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import type { ResumeData, Spacing } from '@tailex/shared';
+import type { Layout, ResumeData } from '@tailex/shared';
 import { ApiError, type RenderedPdf } from '../../lib/api-client.ts';
 
 export type RenderState =
@@ -10,9 +10,11 @@ export type RenderState =
       url: string;
       pageCount: number;
       droppedChars: string[];
-      /** The exact resume and spacing this PDF was built from (to show "out of date"). */
+      /** The layout the server picked, and how full the page is (0–1); null if unknown. */
+      layout: Layout | null;
+      fill: number | null;
+      /** The exact resume this PDF was built from (to show "out of date"). */
       source: ResumeData;
-      spacing: Spacing;
     }
   | { status: 'error'; error: ApiError };
 
@@ -28,9 +30,9 @@ const DEFAULT_OPTIONS: RenderOptions = { busyRetryMs: 1_500 };
  * preview only). Each new PDF revokes the previous URL so old PDFs don't pile up in memory.
  */
 export function usePdfRender(
-  renderPdf: (resume: ResumeData, spacing: Spacing) => Promise<RenderedPdf>,
+  renderPdf: (resume: ResumeData) => Promise<RenderedPdf>,
   options: RenderOptions = DEFAULT_OPTIONS,
-): { state: RenderState; render: (resume: ResumeData, spacing: Spacing) => Promise<void> } {
+): { state: RenderState; render: (resume: ResumeData) => Promise<void> } {
   const [state, setState] = useState<RenderState>({ status: 'idle' });
   const currentUrl = useRef<string | null>(null);
   // Only the newest request may update the screen; an older, slower answer is ignored.
@@ -43,11 +45,11 @@ export function usePdfRender(
   }, []);
 
   const render = useCallback(
-    async (resume: ResumeData, spacing: Spacing): Promise<void> => {
+    async (resume: ResumeData): Promise<void> => {
       const request = ++latestRequest.current;
       setState({ status: 'rendering' });
       try {
-        const result = await renderWithBusyRetry(renderPdf, resume, spacing, options.busyRetryMs);
+        const result = await renderWithBusyRetry(renderPdf, resume, options.busyRetryMs);
         if (request !== latestRequest.current) return;
         const url = URL.createObjectURL(result.pdf);
         if (currentUrl.current !== null) URL.revokeObjectURL(currentUrl.current);
@@ -57,8 +59,9 @@ export function usePdfRender(
           url,
           pageCount: result.pageCount,
           droppedChars: result.droppedChars,
+          layout: result.layout,
+          fill: result.fill,
           source: resume,
-          spacing,
         });
       } catch (error) {
         if (request !== latestRequest.current) return;
@@ -75,16 +78,15 @@ export function usePdfRender(
 }
 
 async function renderWithBusyRetry(
-  renderPdf: (resume: ResumeData, spacing: Spacing) => Promise<RenderedPdf>,
+  renderPdf: (resume: ResumeData) => Promise<RenderedPdf>,
   resume: ResumeData,
-  spacing: Spacing,
   retryMs: number,
 ): Promise<RenderedPdf> {
   try {
-    return await renderPdf(resume, spacing);
+    return await renderPdf(resume);
   } catch (error) {
     if (!(error instanceof ApiError) || error.code !== 'BUSY') throw error;
     await new Promise((resolve) => setTimeout(resolve, retryMs));
-    return renderPdf(resume, spacing); // one retry only, then the error is shown
+    return renderPdf(resume); // one retry only, then the error is shown
   }
 }

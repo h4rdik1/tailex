@@ -237,6 +237,14 @@ Short ADRs. Format: **Context · Options · Choice · Tradeoffs.** New decisions
 - **Context:** CLAUDE.md rule 6 says the owner hand-writes `useApiKey`.
 - **What happened:** The owner wrote the in-memory state, trimming, the remember/clear logic and the storage write/remove helpers against the spec and tests. At the owner's request, the assistant then finished the last step: reading the stored key on load (`readStored` + `parseStored` with `PublicProviderSchema`, lazy `useState`) and `setProvider`.
 
+## ADR-036 — Auto-fit density profiles instead of a "Tighten spacing" button
+
+- **Context:** Real resumes looked half-empty (A4, fixed gaps) or spilled to page 2; the only fix was a manual button shown in the overflow case.
+- **Choice:** Five layouts (`roomy` → `dense`: font, leading, margins, gaps). The server compiles from roomiest down and keeps the **first that fits one page**. The template ends with `\typeout{TAILEX-FILL \the\pagetotal \the\pagegoal}`, so we know how full the page is. At ≥ 75 % full we compile once more with `\flushbottom` and a plain forced page break, so the elastic gaps stretch the content down to the bottom margin. Below 75 % the content is genuinely short: it stays top-aligned and the UI suggests adding a project or bullets.
+- **Why measure instead of estimate:** TeX breaks lines and pages in whole lines, so a character-count estimate is often wrong by a section. Each compile is well under a second; a short resume costs 1–2 compiles, the worst case 6, all inside one concurrency slot.
+- **Template:** US Letter, Skills → Experience → Projects → Education, small-caps headings, every underline drawn by one macro, entries indented, and all vertical spacing from three elastic lengths, with no negative `\vspace` (the cause of overlapping lines in hand-tuned templates). Built from base LaTeX + `geometry` only: `titlesec`, `enumitem` and `fullpage` are not in our minimal TeX Live, and adding `texlive-latex-extra` would cost hundreds of MB per image. The look is inspired by Jake's Resume (MIT licence); the code is our own.
+- **API:** `POST /api/render` takes `{ resume }` (an old `spacing` field is ignored) and returns `x-layout` and `x-page-fill` headers.
+
 ## Pending
 
 - **Analytics:** Cloudflare Web Analytics vs Umami vs GoatCounter. Owner decides in Phase 6. Counts only: `resume_uploaded`, `pdf_generated`, `sample_used`.

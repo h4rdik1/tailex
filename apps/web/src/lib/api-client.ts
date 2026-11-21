@@ -1,15 +1,16 @@
 import {
   ErrorResponseSchema,
   KeyTestResponseSchema,
+  LayoutSchema,
   LLM_HEADERS,
   ParseResponseSchema,
   RENDER_HEADERS,
   type CompileErrorDetail,
   type ErrorCode,
+  type Layout,
   type ParseResponse,
   type PublicProvider,
   type ResumeData,
-  type Spacing,
 } from '@tailex/shared';
 import { ERROR_MESSAGES, type ClientErrorCode } from './error-messages.ts';
 
@@ -51,6 +52,10 @@ export interface RenderedPdf {
   pageCount: number;
   /** Characters the PDF fonts could not print (e.g. emoji), already removed. */
   droppedChars: string[];
+  /** The density profile the server picked, or null if the header was missing/unknown. */
+  layout: Layout | null;
+  /** How full the page is, 0–1, or null if the server could not measure it. */
+  fill: number | null;
 }
 
 /** Plain functions (no `this`), so they can be passed around, e.g. `testKey={api.testKey}`. */
@@ -58,7 +63,7 @@ export interface ApiClient {
   health: () => Promise<boolean>;
   testKey: () => Promise<void>;
   parse: (file: Blob) => Promise<ParseResponse>;
-  render: (resume: ResumeData, spacing: Spacing) => Promise<RenderedPdf>;
+  render: (resume: ResumeData) => Promise<RenderedPdf>;
 }
 
 export function createApiClient(keys: KeySource, fetchFn: typeof fetch = fetch): ApiClient {
@@ -104,16 +109,19 @@ export function createApiClient(keys: KeySource, fetchFn: typeof fetch = fetch):
       return parseOrThrow(ParseResponseSchema, await response.json());
     },
 
-    async render(resume, spacing) {
+    async render(resume) {
       const response = await send('/api/render', {
         method: 'POST',
         headers: { 'content-type': 'application/json' }, // no key: rendering never uses the LLM
-        body: JSON.stringify({ resume, spacing }),
+        // No layout choice: the server picks the roomiest layout that fits one page.
+        body: JSON.stringify({ resume }),
       });
       return {
         pdf: await response.blob(),
         pageCount: Number(response.headers.get(RENDER_HEADERS.pageCount) ?? '0'),
         droppedChars: readDroppedChars(response.headers.get(RENDER_HEADERS.warnings)),
+        layout: readLayout(response.headers.get(RENDER_HEADERS.layout)),
+        fill: readFill(response.headers.get(RENDER_HEADERS.pageFill)),
       };
     },
   };
@@ -134,6 +142,18 @@ function parseOrThrow<T>(
   const result = schema.safeParse(data);
   if (!result.success) throw new ApiError('BAD_RESPONSE', 200);
   return result.data;
+}
+
+function readLayout(header: string | null): Layout | null {
+  const parsed = LayoutSchema.safeParse(header);
+  return parsed.success ? parsed.data : null;
+}
+
+/** "93" → 0.93. Anything that is not a whole number from 0 to 100 means "unknown". */
+function readFill(header: string | null): number | null {
+  if (header === null || !/^\d{1,3}$/.test(header)) return null;
+  const percent = Number(header);
+  return percent <= 100 ? percent / 100 : null;
 }
 
 function readDroppedChars(header: string | null): string[] {

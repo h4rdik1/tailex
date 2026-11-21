@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { escapeHrefUrl } from '../src/services/latex/escape-href-url.ts';
-import { parseLatexErrors, parsePageCount } from '../src/services/latex/log-parser.ts';
+import {
+  parseLatexErrors,
+  parsePageCount,
+  parsePageFill,
+} from '../src/services/latex/log-parser.ts';
 import { createTextCleaner, isSupportedChar } from '../src/services/latex/normalize-text.ts';
 import { createSlotLimiter } from '../src/services/latex/slot-limiter.ts';
 
@@ -106,6 +110,24 @@ describe('parsePageCount', () => {
     ['No pages of output.', 0],
   ])('%s -> %i', (log, pages) => {
     expect(parsePageCount(log)).toBe(pages);
+  });
+});
+
+describe('parsePageFill', () => {
+  it('returns used height divided by page height', () => {
+    expect(parsePageFill('x\nTAILEX-FILL 300.0pt 600.0pt\ny', 'TAILEX-FILL')).toBe(0.5);
+  });
+
+  it('caps at 1 when TeX reports a little more than the page height', () => {
+    expect(parsePageFill('TAILEX-FILL 610.5pt 600.0pt', 'TAILEX-FILL')).toBe(1);
+  });
+
+  it.each([
+    ['no marker', 'Output written on resume.pdf (1 page)'],
+    ['empty page (TeX reports a huge goal)', 'TAILEX-FILL 0.0pt 16383.99998pt'],
+    ['zero height', 'TAILEX-FILL 10pt 0.0pt'],
+  ])('returns null for %s', (_name, log) => {
+    expect(parsePageFill(log, 'TAILEX-FILL')).toBeNull();
   });
 });
 

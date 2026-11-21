@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { makeErrorResponse, RENDER_HEADERS, RenderRequestSchema } from '@tailex/shared';
 import type { CompileTex } from '../services/latex/compile.ts';
 import type { SlotLimiter } from '../services/latex/slot-limiter.ts';
-import { renderResumeTex } from '../services/latex/template.ts';
+import { autoFitRender } from '../services/latex/layout.ts';
 
 export interface RenderRouteDeps {
   compileTex: CompileTex;
@@ -44,8 +44,8 @@ export function createRenderRouter({ compileTex, limiter }: RenderRouteDeps): Ro
     }
 
     try {
-      const { tex, droppedChars } = renderResumeTex(parsed.data.resume, parsed.data.spacing);
-      const result = await compileTex(tex);
+      // Tries density profiles until the resume fits one page (services/latex/layout.ts).
+      const result = await autoFitRender(parsed.data.resume, compileTex);
 
       if (!result.ok && result.reason === 'timeout') {
         res
@@ -64,9 +64,13 @@ export function createRenderRouter({ compileTex, limiter }: RenderRouteDeps): Ro
         .status(200)
         .type('application/pdf')
         .set(RENDER_HEADERS.pageCount, String(result.pageCount))
+        .set(RENDER_HEADERS.layout, result.layout)
         // Header values must be ASCII; dropped characters are often emoji, so URI-encode them.
-        .set(RENDER_HEADERS.warnings, encodeURIComponent(JSON.stringify(droppedChars)))
-        .send(result.pdf);
+        .set(RENDER_HEADERS.warnings, encodeURIComponent(JSON.stringify(result.droppedChars)));
+      if (result.fill !== null) {
+        res.set(RENDER_HEADERS.pageFill, String(Math.round(result.fill * 100)));
+      }
+      res.send(result.pdf);
     } finally {
       release();
     }

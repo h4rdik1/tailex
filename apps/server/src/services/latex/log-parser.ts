@@ -41,6 +41,20 @@ function findLineNumber(lines: string[], start: number): number | null {
   return null;
 }
 
+/**
+ * Reads our marker line "TAILEX-FILL 512.3pt 682.0pt" (content height, then page text height)
+ * and returns how full the last page is, from 0 to 1. Null when the marker is missing or odd
+ * (e.g. an empty page, where TeX reports a huge \pagegoal).
+ */
+export function parsePageFill(log: string, marker: string): number | null {
+  const match = new RegExp(`${marker} ([\\d.]+)pt ([\\d.]+)pt`).exec(log);
+  if (match?.[1] === undefined || match[2] === undefined) return null;
+  const used = Number(match[1]);
+  const available = Number(match[2]);
+  if (!(available > 0) || available > 10_000) return null;
+  return Math.min(1, used / available);
+}
+
 /** Reads "Output written on resume.pdf (2 pages, 41234 bytes)." Returns 0 if no PDF was made. */
 export function parsePageCount(log: string): number {
   const match = /Output written on .*?\((\d+) pages?/s.exec(log);

@@ -54,16 +54,31 @@ describe('api-client: where the key goes', () => {
 
   it('render NEVER sends the key', async () => {
     const pdf = new Response(new Blob(['%PDF-']), {
-      headers: { 'x-page-count': '1', 'x-render-warnings': encodeURIComponent('["🚀"]') },
+      headers: {
+        'x-page-count': '1',
+        'x-render-warnings': encodeURIComponent('["🚀"]'),
+        'x-layout': 'compact',
+        'x-page-fill': '93',
+      },
     });
     const { client, seen } = setup(pdf);
 
-    const result = await client.render(FICTIONAL_RESUME, 'normal');
+    const result = await client.render(FICTIONAL_RESUME);
 
     expect(JSON.stringify(seen[0]?.init)).not.toContain(KEY);
     expect(headersOf(seen[0])['x-llm-key']).toBeUndefined();
-    expect(result.pageCount).toBe(1);
+    expect(JSON.parse(seen[0]?.init.body as string)).toEqual({ resume: FICTIONAL_RESUME });
+    expect(result).toMatchObject({ pageCount: 1, layout: 'compact', fill: 0.93 });
     expect(result.droppedChars).toEqual(['🚀']);
+  });
+
+  it('treats a missing or unknown layout and fill as unknown (null)', async () => {
+    const pdf = new Response(new Blob(['%PDF-']), {
+      headers: { 'x-page-count': '1', 'x-layout': 'huge', 'x-page-fill': 'abc' },
+    });
+    const { client } = setup(pdf);
+
+    expect(await client.render(FICTIONAL_RESUME)).toMatchObject({ layout: null, fill: null });
   });
 
   it('health NEVER sends the key', async () => {
@@ -98,9 +113,7 @@ describe('api-client: errors', () => {
     const body = { error: { code: 'COMPILE_FAILED', message: 'x', details } };
     const { client } = setup(Response.json(body, { status: 422 }));
 
-    const error = (await client
-      .render(FICTIONAL_RESUME, 'normal')
-      .catch((e: unknown) => e)) as ApiError;
+    const error = (await client.render(FICTIONAL_RESUME).catch((e: unknown) => e)) as ApiError;
 
     expect(error.compileErrors).toEqual(details);
   });

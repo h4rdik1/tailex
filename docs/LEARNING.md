@@ -390,6 +390,42 @@ memory. If the server says `503 BUSY` (both pdflatex slots in use), the hook wai
 - **How do you stop an old slow request from overwriting a newer one?** A request counter in a
   ref: each render takes a number, and only the latest number may update state.
 
+### Auto-fit layout: "fill one page, never two"
+
+**The problem you spotted:** the same content looked half-empty on one template and fine on
+another. A fixed layout can't suit both a fresher and someone with 4 jobs.
+
+**How TeX spaces things (the 3 ideas you need):**
+
+1. **Glue.** A gap like `6pt plus 4pt minus 1pt` is a spring: 6pt normally, it may grow by 4pt or
+   shrink by 1pt. All our gaps are glue, defined once (`\sectiongap`, `\entrygap`, `\bulletgap`).
+2. **`\flushbottom`** tells TeX to stretch the glue so the last line touches the bottom margin.
+   Gaps grow in proportion, so section gaps stay bigger than bullet gaps.
+3. **The `\vfil` trap.** `\end{document}` ends the page with `\vfil`, an _infinitely_ stretchy
+   spring that swallows all spare space, so `\flushbottom` silently does nothing. We end the page
+   with a plain forced break (`\penalty-10000`) instead. (We found this by looking at the PDF: it said
+   "stretched" but wasn't.)
+
+**The loop (`layout.ts`):** compile with `roomy`; 2 pages? try `spacious`, then `comfortable`,
+`compact`, `dense`. The first 1-page result wins. The template prints
+`TAILEX-FILL <content height> <page height>` to the log, so we know the fill. At 75 % or more we
+compile once more with `\flushbottom`. Below that we don't stretch (big holes look worse than
+white space at the bottom) and the UI suggests adding content.
+
+**Why not negative `\vspace`?** It's the classic cause of overlapping lines: it pulls the next box
+up into the previous one when other spacing changes. A test checks the template never uses it.
+
+### Interview Q&A (auto-fit)
+
+- **Why compile several times instead of estimating size from character counts?** TeX breaks
+  lines and pages in whole lines and avoids stranded headings, so estimates are wrong by whole
+  sections. Measuring the real output is exact, and a compile takes well under a second.
+- **How do you test it without pdflatex?** `autoFitRender` takes the compiler as a parameter; the
+  test passes a fake that answers "2 pages" or "fill 0.9" per layout and checks which layouts were
+  tried, in what order.
+- **Why no `titlesec`/`enumitem`?** Not in our minimal TeX Live; base LaTeX `list` and `\hrule`
+  give the same look without hundreds of MB in the image.
+
 ---
 
 ## Commands cheat sheet

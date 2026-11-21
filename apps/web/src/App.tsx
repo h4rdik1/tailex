@@ -1,5 +1,4 @@
 import { useMemo, useReducer, useState } from 'react';
-import type { Spacing } from '@tailex/shared';
 import { StepHeading } from './app/StepHeading.tsx';
 import { Stepper } from './app/Stepper.tsx';
 import { INITIAL_STEPS, stepsReducer, type StepId } from './app/steps.ts';
@@ -53,7 +52,6 @@ export function App() {
   const placeholders = useMemo(() => findPlaceholders(resume), [resume]);
   // The reducer returns a new object on every edit, so "same object" means "no edits since".
   const outOfDate = pdf.status === 'ready' && pdf.source !== resume;
-  const spacing: Spacing = pdf.status === 'ready' ? pdf.spacing : 'normal';
 
   async function parseFile(file: File): Promise<void> {
     setParsing(true);
@@ -79,7 +77,7 @@ export function App() {
 
   function goToPreview(): void {
     dispatchStep({ type: 'advance', step: 'preview' });
-    if (pdf.status !== 'ready' || outOfDate) void render(resume, spacing);
+    if (pdf.status !== 'ready' || outOfDate) void render(resume);
   }
 
   const editor = (
@@ -153,8 +151,8 @@ export function App() {
                     state={pdf}
                     outOfDate={outOfDate}
                     blocked={problems.length > 0}
-                    onRender={(next) => {
-                      void render(resume, next);
+                    onRender={() => {
+                      void render(resume);
                     }}
                   />
                 }
@@ -177,7 +175,7 @@ export function App() {
               state={pdf}
               outOfDate={outOfDate}
               onRender={() => {
-                void render(resume, spacing);
+                void render(resume);
               }}
             />
           )}

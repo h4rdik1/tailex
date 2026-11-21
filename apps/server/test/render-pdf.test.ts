@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { FICTIONAL_RESUME, type ResumeData } from '@tailex/shared';
 import { compileTex, type CompileResult } from '../src/services/latex/compile.ts';
-import { renderResumeTex } from '../src/services/latex/template.ts';
+import { autoFitRender } from '../src/services/latex/layout.ts';
+import { parsePageFill } from '../src/services/latex/log-parser.ts';
+import { FILL_MARKER, renderResumeTex } from '../src/services/latex/template.ts';
 import { hasPdflatex } from './helpers/pdflatex.ts';
 import { extractPdfText } from './helpers/pdf-text.ts';
 import { INJECTION_PAYLOADS } from './helpers/payloads.ts';
@@ -11,9 +13,29 @@ function expectOk(result: CompileResult): Extract<CompileResult, { ok: true }> {
   return result;
 }
 
-async function renderPdf(resume: ResumeData, spacing: 'normal' | 'tight' = 'normal') {
-  const { tex, droppedChars } = renderResumeTex(resume, spacing);
+async function renderPdf(resume: ResumeData) {
+  const { tex, droppedChars } = renderResumeTex(resume, { layout: 'comfortable', fillPage: false });
   return { result: expectOk(await compileTex(tex)), droppedChars };
+}
+
+/** A fictional resume with `jobs` extra jobs of `bullets` one-line bullets each. */
+function withJobs(jobs: number, bullets: number): ResumeData {
+  const resume = structuredClone(FICTIONAL_RESUME);
+  for (let i = 0; i < jobs; i += 1) {
+    resume.experience.push({
+      id: `x${String(i)}`,
+      title: 'Software Engineer',
+      company: 'Fictional Co',
+      location: 'Remote',
+      startDate: '2019',
+      endDate: '2020',
+      bullets: Array.from({ length: bullets }, (_, j) => ({
+        id: `x${String(i)}-b${String(j)}`,
+        text: 'Delivered a measurable improvement to a fictional internal system used by many teams.',
+      })),
+    });
+  }
+  return resume;
 }
 
 /** Removes the spaces that TeX turns into positioning, to match extracted PDF text. */
@@ -80,28 +102,42 @@ describe.skipIf(!hasPdflatex)('resume template → PDF (needs escapeLatex)', () 
     expect(result.pdf.toString('latin1')).toMatch(/\/URI\s*\(https:/);
   });
 
-  it('reports overflow beyond one page, and tight spacing never uses more pages', async () => {
-    const resume = structuredClone(FICTIONAL_RESUME);
-    const longBullet = 'Delivered a measurable improvement to a fictional internal system. '.repeat(
-      4,
-    );
-    resume.experience = Array.from({ length: 6 }, (_, i) => ({
-      id: `exp${String(i)}`,
-      title: 'Software Engineer',
-      company: 'Fictional Co',
-      location: 'Remote',
-      startDate: '2020',
-      endDate: '2021',
-      bullets: Array.from({ length: 5 }, (__, j) => ({
-        id: `exp${String(i)}-b${String(j)}`,
-        text: longBullet,
-      })),
-    }));
+  it('measures how full the page is', async () => {
+    const { result } = await renderPdf(FICTIONAL_RESUME);
+    const fill = parsePageFill(result.log, FILL_MARKER);
 
-    const normal = await renderPdf(resume, 'normal');
-    const tight = await renderPdf(resume, 'tight');
+    expect(fill).not.toBeNull();
+    expect(fill).toBeGreaterThan(0.2);
+    expect(fill).toBeLessThan(0.9);
+  });
+});
 
-    expect(normal.result.pageCount).toBeGreaterThan(1);
-    expect(tight.result.pageCount).toBeLessThanOrEqual(normal.result.pageCount);
+/** The auto-fit loop against real pdflatex: the "classification" the user sees. */
+describe.skipIf(!hasPdflatex)('autoFitRender with real pdflatex', () => {
+  it('a short resume keeps the roomiest layout, top-aligned', async () => {
+    const result = await autoFitRender(FICTIONAL_RESUME, compileTex);
+
+    expect(result).toMatchObject({ ok: true, layout: 'roomy', pageCount: 1, stretched: false });
+  });
+
+  it('a medium resume fills the page down to the bottom margin', async () => {
+    const result = await autoFitRender(withJobs(2, 5), compileTex);
+
+    expect(result).toMatchObject({ ok: true, pageCount: 1, stretched: true });
+    expect(result.ok && result.fill).toBeGreaterThanOrEqual(0.75);
+  });
+
+  it('a long resume moves to a denser layout and still fits one page', async () => {
+    const result = await autoFitRender(withJobs(4, 5), compileTex);
+
+    expect(result.ok && result.layout).not.toBe('roomy');
+    expect(result).toMatchObject({ ok: true, pageCount: 1 });
+  });
+
+  it('a resume too long for any layout comes back dense, with its real page count', async () => {
+    const result = await autoFitRender(withJobs(9, 8), compileTex);
+
+    expect(result).toMatchObject({ ok: true, layout: 'dense' });
+    expect(result.ok && result.pageCount).toBeGreaterThan(1);
   });
 });
