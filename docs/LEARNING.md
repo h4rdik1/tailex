@@ -431,6 +431,35 @@ heading font made every heading 5pt too tall. The numbers showed it; eyes would 
 - **Why no `titlesec`/`enumitem`?** Not in our minimal TeX Live; base LaTeX lists, `\hrule` and
   struts give the same look without hundreds of MB in the image.
 
+### Hidden links and the location
+
+**The bug you found:** the uploaded resume showed `LinkedIn | GitHub` and the Tailex version had
+neither. In a PDF, a link is two things: the words you see, and an invisible clickable area that
+holds the real address (a "link annotation"). Text extraction only returns the words.
+
+**The fix in one line:** read the invisible part too (`page.getAnnotations()` for PDF, the `href`
+values for Word), keep only safe `http(s)`/`mailto:` targets, and add them to the contact block
+with friendly labels. The addresses never go to the AI: they were never in the text.
+
+**Location by elimination:** after redaction a header looks like
+`Bangalore, Karnataka | [PHONE] | [EMAIL] | LinkedIn | GitHub`. Cut the line at the placeholders and
+`|`, throw away pieces that are link labels, and what is left that looks like "Capitalised, Words"
+is the location. We only look at the first four lines, so a job's city is never mistaken for yours.
+
+**A bug the first test found:** a stray lowercase word (`asha`) between two pipes looked like a
+place. Real places start with a capital letter, so the shape check now requires one.
+
+### Interview Q&A (links and location)
+
+- **Why can't you just read the text?** Because a hyperlink's address is metadata, not text.
+- **Is it safe to read links out of an uploaded file?** We accept only `http(s)` and `mailto:`,
+  cap the count and length, then still filter through the same allowlist used for the PDF
+  (`SAFE_URL_PATTERN`) before a link can ever reach LaTeX. `javascript:` and `file:` die at the first step.
+- **Why does the location detector return nothing when unsure?** A wrong city on a resume is
+  worse than an empty field the user fills in during review.
+- **How did you test link extraction without binary fixtures?** The Word test builds a real .docx
+  in memory (a ZIP) with a hyperlink; the PDF tests use our own LaTeX pipeline to make PDFs.
+
 ---
 
 ## Commands cheat sheet

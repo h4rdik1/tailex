@@ -19,6 +19,8 @@ const PARSE_JSON_SCHEMA = toProviderJsonSchema(LlmParsedResumeSchema);
 
 export interface ParseResumeInput {
   text: string;
+  /** Link targets hidden inside the file (see extractor.ts). Never sent to the LLM. */
+  hiddenUrls?: readonly string[];
   provider: LlmProvider;
   apiKey: string;
 }
@@ -29,10 +31,11 @@ export interface ParseResumeInput {
  */
 export async function parseResume({
   text,
+  hiddenUrls = [],
   provider,
   apiKey,
 }: ParseResumeInput): Promise<ParseResponse> {
-  const { redactedText, contact } = redactContact(text);
+  const { redactedText, contact } = redactContact(text, hiddenUrls);
   const request = {
     apiKey,
     system: PARSE_SYSTEM_PROMPT,

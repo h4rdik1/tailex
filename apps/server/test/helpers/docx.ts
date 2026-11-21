@@ -9,9 +9,26 @@ export interface ZipEntry {
   data: Buffer;
 }
 
-export function buildDocx(paragraphs: readonly string[]): Buffer {
-  const body = paragraphs
-    .map((text) => `<w:p><w:r><w:t xml:space="preserve">${escapeXml(text)}</w:t></w:r></w:p>`)
+export interface DocxLink {
+  text: string;
+  url: string;
+}
+
+/** `links` become clickable words whose address is stored in the link, like a real Word hyperlink. */
+export function buildDocx(paragraphs: readonly string[], links: readonly DocxLink[] = []): Buffer {
+  const paragraphXml = paragraphs.map(
+    (text) => `<w:p><w:r><w:t xml:space="preserve">${escapeXml(text)}</w:t></w:r></w:p>`,
+  );
+  const linkXml = links.map(
+    (link, index) =>
+      `<w:p><w:hyperlink r:id="rIdLink${String(index)}"><w:r><w:t>${escapeXml(link.text)}</w:t></w:r></w:hyperlink></w:p>`,
+  );
+  const body = [...paragraphXml, ...linkXml].join('');
+  const linkRelationships = links
+    .map(
+      (link, index) =>
+        `<Relationship Id="rIdLink${String(index)}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink" Target="${escapeXml(link.url)}" TargetMode="External"/>`,
+    )
     .join('');
   return buildZip([
     {
@@ -29,7 +46,13 @@ export function buildDocx(paragraphs: readonly string[]): Buffer {
     {
       name: 'word/document.xml',
       data: Buffer.from(
-        `<?xml version="1.0" encoding="UTF-8"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body>${body}</w:body></w:document>`,
+        `<?xml version="1.0" encoding="UTF-8"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><w:body>${body}</w:body></w:document>`,
+      ),
+    },
+    {
+      name: 'word/_rels/document.xml.rels',
+      data: Buffer.from(
+        `<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">${linkRelationships}</Relationships>`,
       ),
     },
   ]);

@@ -7,9 +7,11 @@ import {
   EXTRACTION_LIMITS,
   ExtractionError,
   extractText,
+  keepSafeUrls,
 } from '../src/services/extract/extractor.ts';
 import { detectFileType } from '../src/services/extract/file-type.ts';
 import { checkZipLimits, DOCX_LIMITS } from '../src/services/extract/zip-limits.ts';
+import { redactContact } from '../src/services/redact/redact-contact.ts';
 import { createMockProvider } from '../src/services/llm/mock.ts';
 import { createProviderRegistry } from '../src/services/llm/registry.ts';
 import { compileTex } from '../src/services/latex/compile.ts';
@@ -30,7 +32,7 @@ const FICTIONAL_DOCX = buildDocx([
 
 describe('extractText: PDF (unpdf)', () => {
   it('reads the text of a real PDF', async () => {
-    const text = await extractText(FICTIONAL_PDF, 'pdf');
+    const { text } = await extractText(FICTIONAL_PDF, 'pdf');
 
     expect(text).toContain('Asha Testwala');
     expect(text).toContain('Built a React dashboard');
@@ -57,11 +59,95 @@ describe('extractText: PDF (unpdf)', () => {
   });
 });
 
+describe('extractText: hidden link targets', () => {
+  it('reads the real address behind PDF links (the fixture links two fictional sites)', async () => {
+    const { urls } = await extractText(FICTIONAL_PDF, 'pdf');
+
+    expect(urls).toEqual(
+      expect.arrayContaining(['https://github.com/asha-example', 'https://asha.example.org/']),
+    );
+  });
+
+  it('reads the real address behind Word links, not only the visible words', async () => {
+    const docx = buildDocx(
+      ['Asha Testwala'],
+      [
+        { text: 'LinkedIn', url: 'https://www.linkedin.com/in/asha-example?a=1&b=2' },
+        { text: 'GitHub', url: 'https://github.com/asha-example' },
+      ],
+    );
+
+    const { text, urls } = await extractText(docx, 'docx');
+
+    expect(text).toContain('LinkedIn'); // the visible word
+    expect(text).not.toContain('linkedin.com'); // the address is NOT in the text
+    expect(urls).toEqual([
+      'https://www.linkedin.com/in/asha-example?a=1&b=2',
+      'https://github.com/asha-example',
+    ]);
+  });
+
+  it('returns no links for a file without any', async () => {
+    expect((await extractText(FICTIONAL_DOCX, 'docx')).urls).toEqual([]);
+  });
+});
+
+describe.skipIf(!hasPdflatex)('a PDF whose links show only words (the reported bug)', () => {
+  it('recovers LinkedIn and GitHub from the link targets and the city from the header', async () => {
+    // T1 fonts so "|" prints as a pipe. The link words show no address, like a real resume.
+    const tex = String.raw`\documentclass{article}\usepackage[T1]{fontenc}\usepackage{hyperref}
+\begin{document}
+Asha Testwala\\
+Pune, India | 9000000000 | \href{mailto:asha@example.com}{asha@example.com} |
+\href{https://www.linkedin.com/in/asha-example}{LinkedIn} |
+\href{https://github.com/asha-example}{GitHub}\\
+Experience\\ Engineer
+\end{document}`;
+    const compiled = await compileTex(tex);
+    if (!compiled.ok) throw new Error('could not build the test PDF');
+
+    const { text, urls } = await extractText(compiled.pdf, 'pdf');
+    const { contact, redactedText } = redactContact(text, urls);
+
+    expect(text).not.toContain('linkedin.com'); // the address is not in the text at all
+    expect(contact.links.map((link) => link.label)).toEqual(['LinkedIn', 'GitHub']);
+    expect(contact.links[0]?.url).toBe('https://www.linkedin.com/in/asha-example');
+    expect(contact.location).toBe('Pune, India');
+    expect(redactedText).not.toContain('asha-example');
+  });
+});
+
+describe('keepSafeUrls', () => {
+  it('keeps web and mail links and drops everything else', () => {
+    expect(
+      keepSafeUrls([
+        'https://a.example/x',
+        'HTTP://b.example',
+        'mailto:a@b.example',
+        'javascript:alert(1)',
+        'file:///etc/passwd',
+        'data:text/html,x',
+        '#page-3',
+        '',
+      ]),
+    ).toEqual(['https://a.example/x', 'HTTP://b.example', 'mailto:a@b.example']);
+  });
+
+  it('removes duplicates and caps the count and length', () => {
+    const many = Array.from({ length: 50 }, (_, i) => `https://a.example/${String(i)}`);
+    const long = `https://a.example/${'x'.repeat(EXTRACTION_LIMITS.maxLinkLength)}`;
+
+    expect(keepSafeUrls(['https://a.example', 'https://a.example'])).toEqual(['https://a.example']);
+    expect(keepSafeUrls(many)).toHaveLength(EXTRACTION_LIMITS.maxLinks);
+    expect(keepSafeUrls([long])).toEqual([]);
+  });
+});
+
 describe('extractText: DOCX (mammoth)', () => {
   it('reads the paragraphs of a real DOCX', async () => {
     expect(detectFileType(FICTIONAL_DOCX)).toBe('docx');
 
-    const text = await extractText(FICTIONAL_DOCX, 'docx');
+    const { text } = await extractText(FICTIONAL_DOCX, 'docx');
 
     expect(text).toContain('Asha Testwala');
     expect(text).toContain('40 internal support agents & 3 teams');

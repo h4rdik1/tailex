@@ -1,7 +1,11 @@
 import express, { Router, type Response } from 'express';
 import { makeErrorResponse, UPLOAD_LIMITS, type ParseResponse } from '@tailex/shared';
 import { getLlmContext, requireLlmKey } from '../middleware/require-llm-key.ts';
-import { ExtractionError, type TextExtractor } from '../services/extract/extractor.ts';
+import {
+  ExtractionError,
+  type ExtractedDocument,
+  type TextExtractor,
+} from '../services/extract/extractor.ts';
 import { detectFileType } from '../services/extract/file-type.ts';
 import type { ProviderRegistry } from '../services/llm/registry.ts';
 import { LlmError } from '../services/llm/types.ts';
@@ -40,12 +44,17 @@ export function createParseRouter({ registry, extractText, logger }: ParseRouteD
       return;
     }
 
-    const text = await extractOrFail(extractText, file, type, res);
-    if (text === null) return;
+    const document = await extractOrFail(extractText, file, type, res);
+    if (document === null) return;
 
     const { provider, apiKey } = getLlmContext(req);
     try {
-      const result: ParseResponse = await parseResume({ text, provider, apiKey });
+      const result: ParseResponse = await parseResume({
+        text: document.text,
+        hiddenUrls: document.urls,
+        provider,
+        apiKey,
+      });
       res.status(200).json(result);
     } catch (error) {
       if (!(error instanceof LlmError)) throw error;
@@ -56,22 +65,23 @@ export function createParseRouter({ registry, extractText, logger }: ParseRouteD
   return router;
 }
 
-/** Returns the text, or sends the error response and returns null. */
+/** Returns the trimmed text and hidden link targets, or sends the error response and returns null. */
 async function extractOrFail(
   extractText: TextExtractor,
   file: Buffer,
   type: 'pdf' | 'docx',
   res: Response,
-): Promise<string | null> {
-  let text: string;
+): Promise<ExtractedDocument | null> {
+  let extracted: ExtractedDocument;
   try {
-    text = (await extractText(file, type)).trim();
+    extracted = await extractText(file, type);
   } catch (error) {
     // Unexpected errors (bugs) go to the error handler as 500; known read failures are 422.
     if (!(error instanceof ExtractionError)) throw error;
     sendError(res, 422, 'TEXT_EXTRACTION_FAILED', 'We could not read text from this file.');
     return null;
   }
+  const text = extracted.text.trim();
   if (text === '') {
     sendError(res, 422, 'TEXT_EXTRACTION_FAILED', 'No text found. Is it a scanned image?');
     return null;
@@ -80,7 +90,7 @@ async function extractOrFail(
     sendError(res, 413, 'TEXT_TOO_LONG', 'This document is too long for a one-page resume.');
     return null;
   }
-  return text;
+  return { text, urls: extracted.urls };
 }
 
 function sendError(

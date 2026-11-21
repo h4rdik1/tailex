@@ -17,21 +17,22 @@ const DOCX_BYTES = Buffer.concat([
   Buffer.from('....word/document.xml....'),
 ]);
 
-/** Pretends to read the file: returns fixed text (real extraction is a pending dependency). */
+/** Pretends to read the file: returns fixed text and link targets, with no real PDF parsing. */
 const fakeExtractor =
-  (text: string): TextExtractor =>
+  (text: string, urls: string[] = []): TextExtractor =>
   () =>
-    Promise.resolve(text);
+    Promise.resolve({ text, urls });
 
 function setup(
   answers: readonly MockAnswer[] = [SAMPLE_PARSED],
   text: string = FIXTURE_RESUMES.fresher.text,
+  urls: string[] = [],
 ) {
   const mock = createMockProvider(answers);
   const logs: string[] = [];
   const options: AppOptions = {
     registry: createProviderRegistry({ mock }, { allowMock: true }),
-    extractText: fakeExtractor(text),
+    extractText: fakeExtractor(text, urls),
     logger: createLogger((line) => logs.push(line)),
   };
   return { app: createApp(options), mock, logs };
@@ -103,6 +104,33 @@ describe('POST /api/parse: happy path', () => {
     const user = mock.calls[0]?.user ?? '';
     expect(user.match(/<\/resume_text>/g)).toHaveLength(1);
     expect(user.endsWith('\n</resume_text>')).toBe(true);
+  });
+});
+
+describe('POST /api/parse: contact details hidden inside the file', () => {
+  const text =
+    'Asha Testwala\nPune, India | 9000000000 | asha@example.com | LinkedIn | GitHub\n\nExperience\nEngineer';
+
+  it('returns the link targets and the location in the contact block', async () => {
+    const { app } = setup([SAMPLE_PARSED], text, [
+      'https://www.linkedin.com/in/asha-example',
+      'https://github.com/asha-example',
+    ]);
+
+    const res = await upload(app);
+
+    expect(res.status).toBe(200);
+    const { resume } = ParseResponseSchema.parse(res.body);
+    expect(resume.contact.location).toBe('Pune, India');
+    expect(resume.contact.links.map((link) => link.label)).toEqual(['LinkedIn', 'GitHub']);
+  });
+
+  it('never sends the hidden addresses to the LLM', async () => {
+    const { app, mock } = setup([SAMPLE_PARSED], text, ['https://github.com/asha-example']);
+
+    await upload(app);
+
+    expect(JSON.stringify(mock.calls)).not.toContain('asha-example');
   });
 });
 

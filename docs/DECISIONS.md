@@ -247,6 +247,14 @@ Short ADRs. Format: **Context · Options · Choice · Tradeoffs.** New decisions
 - **Known difference:** we use T1 + Latin Modern (needed for `<`, `>` and accented characters); the reference uses OT1 Computer Modern, whose glyphs are a hair wider, so a bullet that ends exactly at the margin may wrap in one and not the other.
 - **API:** `POST /api/render` takes `{ resume }` (an old `spacing` field is ignored) and returns `x-layout` (the level, 1–14) and `x-page-fill` headers.
 
+## ADR-037 — Recover hidden link targets and the location for the contact block
+
+- **Context:** A PDF or Word link shows words ("LinkedIn", "GitHub") but keeps the address in the link itself, so text extraction never saw it and the contact line lost its links. The location (e.g. "Bangalore, Karnataka") was also never extracted. Both had to be typed in the review form.
+- **Choice (links):** The extractor now returns `{ text, urls }`. For PDFs it reads pdf.js link annotations (`page.getAnnotations()`, already part of `unpdf`); for Word it reads only the `href` values from `mammoth`'s HTML conversion (the HTML is never rendered or returned). `keepSafeUrls` keeps only `http(s)` and `mailto:`, removes duplicates and caps count (20) and length (500). `redactContact(text, hiddenUrls)` merges them with the links found in the text: same page written two ways counts once (the visible form wins), the existing `SAFE_URL_PATTERN` and 5-link cap still apply, well-known sites get friendly labels (LinkedIn, GitHub, GitLab, LeetCode, X, Twitter) and other sites show their address. A `mailto:` link fills Email only when the text had none.
+- **Privacy:** The hidden addresses were never in the text, and they still are not: they only complete the contact block the user reviews. A test checks that no hidden address reaches the LLM request.
+- **Choice (location):** `guessLocation` runs on the **redacted** text. In the first four lines (stopping at a section heading) the placeholders and `| · • – —` cut each line into pieces; the first piece that looks like a place (capitalised comma-separated parts, optional postcode, not a link label like "LinkedIn", at most 60 characters) is the location. A piece on a line of its own counts only when it has a comma, so an unrecognised name is not mistaken for a city. A city lower on the page (a job's location) is never reached.
+- **Tradeoffs:** Heuristic, like the rest of redaction: when unsure it returns an empty string and the user fills it in. A label with no page behind it (the word "GitHub" with no link) stays text, because we cannot invent an address. Location is not replaced by a placeholder in the text sent to the LLM (it is not in the list of redacted items in CLAUDE.md and the model needs jobs' cities as context).
+
 ## Pending
 
 - **Analytics:** Cloudflare Web Analytics vs Umami vs GoatCounter. Owner decides in Phase 6. Counts only: `resume_uploaded`, `pdf_generated`, `sample_used`.
