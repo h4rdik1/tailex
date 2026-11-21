@@ -14,7 +14,7 @@ function expectOk(result: CompileResult): Extract<CompileResult, { ok: true }> {
 }
 
 async function renderPdf(resume: ResumeData) {
-  const { tex, droppedChars } = renderResumeTex(resume, { layout: 'comfortable', fillPage: false });
+  const { tex, droppedChars } = renderResumeTex(resume, { layout: 'standard' });
   return { result: expectOk(await compileTex(tex)), droppedChars };
 }
 
@@ -114,23 +114,24 @@ describe.skipIf(!hasPdflatex)('resume template → PDF (needs escapeLatex)', () 
 
 /** The auto-fit loop against real pdflatex: the "classification" the user sees. */
 describe.skipIf(!hasPdflatex)('autoFitRender with real pdflatex', () => {
-  it('a short resume keeps the roomiest layout, top-aligned', async () => {
+  it('a short resume keeps the standard design, top-aligned with room to spare', async () => {
     const result = await autoFitRender(FICTIONAL_RESUME, compileTex);
 
-    expect(result).toMatchObject({ ok: true, layout: 'roomy', pageCount: 1, stretched: false });
+    expect(result).toMatchObject({ ok: true, layout: 'standard', pageCount: 1 });
+    expect(result.ok && result.fill).toBeLessThan(0.75); // the UI suggests adding content
   });
 
-  it('a medium resume fills the page down to the bottom margin', async () => {
-    const result = await autoFitRender(withJobs(2, 5), compileTex);
+  it('a well-filled resume keeps the standard design', async () => {
+    const result = await autoFitRender(withJobs(3, 5), compileTex);
 
-    expect(result).toMatchObject({ ok: true, pageCount: 1, stretched: true });
-    expect(result.ok && result.fill).toBeGreaterThanOrEqual(0.75);
+    expect(result).toMatchObject({ ok: true, layout: 'standard', pageCount: 1 });
+    expect(result.ok && result.fill).toBeGreaterThan(0.85);
   });
 
   it('a long resume moves to a denser layout and still fits one page', async () => {
-    const result = await autoFitRender(withJobs(4, 5), compileTex);
+    const result = await autoFitRender(withJobs(5, 5), compileTex);
 
-    expect(result.ok && result.layout).not.toBe('roomy');
+    expect(result.ok && result.layout).not.toBe('standard');
     expect(result).toMatchObject({ ok: true, pageCount: 1 });
   });
 

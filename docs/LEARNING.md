@@ -390,41 +390,40 @@ memory. If the server says `503 BUSY` (both pdflatex slots in use), the hook wai
 - **How do you stop an old slow request from overwriting a newer one?** A request counter in a
   ref: each render takes a number, and only the latest number may update state.
 
-### Auto-fit layout: "fill one page, never two"
+### Auto-fit layout: "one page, same rhythm"
 
-**The problem you spotted:** the same content looked half-empty on one template and fine on
-another. A fixed layout can't suit both a fresher and someone with 4 jobs.
+**The problem you spotted:** the same content looked half-empty or oddly spaced compared with your
+own template. Two lessons came out of fixing it:
 
-**How TeX spaces things (the 3 ideas you need):**
+1. **Match a reference by measuring, not by eye.** We compiled your real template (with
+   `titlesec`/`enumitem`, in a throwaway container) and ours, with the same fictional content.
+   Both print `\the\pagetotal` (how far down the page TeX is) before every section, so we could
+   see that, for example, our Experience section was 30pt shorter and why: the underline sat too
+   close to the title, the gap under the rule was 2pt short, and your heading rows are table rows
+   that always reserve a full line (a **strut**). Each fix was checked against the numbers.
+2. **Don't stretch to fill.** A first version enlarged the font and stretched every gap
+   (`\flushbottom`) on short resumes. It "filled" the page, but bullets drifted apart and each
+   resume looked different. Now the design stays fixed; short content simply ends early, and the
+   app says "there is room for another project".
 
-1. **Glue.** A gap like `6pt plus 4pt minus 1pt` is a spring: 6pt normally, it may grow by 4pt or
-   shrink by 1pt. All our gaps are glue, defined once (`\sectiongap`, `\entrygap`, `\bulletgap`).
-2. **`\flushbottom`** tells TeX to stretch the glue so the last line touches the bottom margin.
-   Gaps grow in proportion, so section gaps stay bigger than bullet gaps.
-3. **The `\vfil` trap.** `\end{document}` ends the page with `\vfil`, an _infinitely_ stretchy
-   spring that swallows all spare space, so `\flushbottom` silently does nothing. We end the page
-   with a plain forced break (`\penalty-10000`) instead. (We found this by looking at the PDF: it said
-   "stretched" but wasn't.)
+**Glue, in one line:** a gap like `11.5pt plus 3pt minus 1pt` is a spring. We keep small `minus`
+values so TeX can squeeze a page that is _just_ too long, but we never ask it to stretch.
 
-**The loop (`layout.ts`):** compile with `roomy`; 2 pages? try `spacious`, then `comfortable`,
-`compact`, `dense`. The first 1-page result wins. The template prints
-`TAILEX-FILL <content height> <page height>` to the log, so we know the fill. At 75 % or more we
-compile once more with `\flushbottom`. Below that we don't stretch (big holes look worse than
-white space at the bottom) and the UI suggests adding content.
-
-**Why not negative `\vspace`?** It's the classic cause of overlapping lines: it pulls the next box
-up into the previous one when other spacing changes. A test checks the template never uses it.
+**The loop (`layout.ts`):** compile `standard`; 2 pages? try `compact`, then `dense`. The first
+1-page result wins; if even `dense` needs 2 pages, the app asks you to shorten bullets.
 
 ### Interview Q&A (auto-fit)
 
+- **How did you make your template match a reference design?** Compiled both with the same
+  content, logged `\pagetotal` at each section, compared, tuned, re-measured. Numbers, not
+  screenshots.
 - **Why compile several times instead of estimating size from character counts?** TeX breaks
-  lines and pages in whole lines and avoids stranded headings, so estimates are wrong by whole
-  sections. Measuring the real output is exact, and a compile takes well under a second.
+  lines and pages in whole lines, so estimates are wrong by whole sections. A compile takes well
+  under a second.
 - **How do you test it without pdflatex?** `autoFitRender` takes the compiler as a parameter; the
-  test passes a fake that answers "2 pages" or "fill 0.9" per layout and checks which layouts were
-  tried, in what order.
-- **Why no `titlesec`/`enumitem`?** Not in our minimal TeX Live; base LaTeX `list` and `\hrule`
-  give the same look without hundreds of MB in the image.
+  test passes a fake that answers "2 pages" or "fill 0.55" per layout and checks the order tried.
+- **Why no `titlesec`/`enumitem`?** Not in our minimal TeX Live; base LaTeX lists, `\hrule` and
+  struts give the same look without hundreds of MB in the image.
 
 ---
 

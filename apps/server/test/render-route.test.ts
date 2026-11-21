@@ -72,7 +72,7 @@ describe('POST /api/render: rendering (needs escapeLatex)', () => {
     expect(res.status).toBe(200);
     expect(res.headers['content-type']).toBe('application/pdf');
     expect(res.headers[RENDER_HEADERS.pageCount]).toBe('1');
-    expect(res.headers[RENDER_HEADERS.layout]).toBe('roomy'); // fits at once: roomiest layout
+    expect(res.headers[RENDER_HEADERS.layout]).toBe('standard'); // fits at once: the standard design
     expect(res.headers[RENDER_HEADERS.pageFill]).toBeUndefined(); // the fake log has no marker
     expect(JSON.parse(decodeURIComponent(String(res.headers[RENDER_HEADERS.warnings])))).toEqual([
       '🚀',

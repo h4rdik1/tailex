@@ -1,9 +1,7 @@
 import type { Layout } from '@tailex/shared';
 
 export const LAYOUT_LABELS: Record<Layout, string> = {
-  roomy: 'Roomy',
-  spacious: 'Spacious',
-  comfortable: 'Comfortable',
+  standard: 'Standard',
   compact: 'Compact',
   dense: 'Dense',
 };

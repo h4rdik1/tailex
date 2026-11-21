@@ -2,10 +2,11 @@ import { z } from 'zod';
 import { ResumeDataSchema } from './resume.ts';
 
 /**
- * Density profiles, roomiest first. The server picks the roomiest one that still fits on one
- * page (docs/DECISIONS.md ADR-036); the client never chooses.
+ * Density profiles. `standard` is the reference design; `compact` and `dense` are only used
+ * when the resume would otherwise spill onto a second page (docs/DECISIONS.md ADR-036).
+ * The server picks; the client never chooses.
  */
-export const LayoutSchema = z.enum(['roomy', 'spacious', 'comfortable', 'compact', 'dense']);
+export const LayoutSchema = z.enum(['standard', 'compact', 'dense']);
 export type Layout = z.infer<typeof LayoutSchema>;
 
 /** Body of `POST /api/render`. Unknown keys (e.g. an old `spacing` field) are ignored. */

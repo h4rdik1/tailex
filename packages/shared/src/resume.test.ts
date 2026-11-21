@@ -58,7 +58,7 @@ describe('RenderRequestSchema', () => {
 });
 
 describe('LayoutSchema', () => {
-  it('lists layouts from roomiest to densest (the auto-fit order)', () => {
-    expect(LayoutSchema.options).toEqual(['roomy', 'spacious', 'comfortable', 'compact', 'dense']);
+  it('lists layouts in auto-fit order: the standard design, then denser ones', () => {
+    expect(LayoutSchema.options).toEqual(['standard', 'compact', 'dense']);
   });
 });

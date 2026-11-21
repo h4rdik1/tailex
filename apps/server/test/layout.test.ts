@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { FICTIONAL_RESUME, type Layout } from '@tailex/shared';
 import type { CompileResult, CompileTex } from '../src/services/latex/compile.ts';
-import { autoFitRender, shouldStretch } from '../src/services/latex/layout.ts';
+import { autoFitRender } from '../src/services/latex/layout.ts';
 
 interface FakePage {
   pages: number;
@@ -11,18 +11,15 @@ interface FakePage {
 
 /**
  * A fake pdflatex that answers per layout (read from the first line of the .tex), so we can
- * test the auto-fit decisions without TeX installed. It records every call.
+ * test the auto-fit decisions without TeX installed. It records which layouts were tried.
  */
 function fakeCompiler(byLayout: Partial<Record<Layout, FakePage>>, fallback: FakePage) {
-  const calls: { layout: string; stretched: boolean }[] = [];
+  const tried: string[] = [];
   const compileTex: CompileTex = (tex) => {
     const layout = /^% tailex-layout: (\w+)/.exec(tex)?.[1] ?? '?';
-    calls.push({ layout, stretched: tex.includes('\\flushbottom') });
+    tried.push(layout);
     const page = byLayout[layout as Layout] ?? fallback;
-    const log =
-      page.fill === undefined
-        ? ''
-        : `TAILEX-FILL ${String(page.fill * 600)}pt 600.0pt\nOutput written on resume.pdf`;
+    const log = page.fill === undefined ? '' : `TAILEX-FILL ${String(page.fill * 600)}pt 600.0pt`;
     const result: CompileResult = {
       ok: true,
       pdf: Buffer.from(`%PDF-${layout}`),
@@ -31,47 +28,40 @@ function fakeCompiler(byLayout: Partial<Record<Layout, FakePage>>, fallback: Fak
     };
     return Promise.resolve(result);
   };
-  return { compileTex, calls };
+  return { compileTex, tried };
 }
 
 describe('autoFitRender', () => {
-  it('a short resume stays on the roomiest layout and is not stretched', async () => {
-    const { compileTex, calls } = fakeCompiler({}, { pages: 1, fill: 0.5 });
+  it('uses the standard design when it fits, in one compile, never stretched', async () => {
+    const { compileTex, tried } = fakeCompiler({}, { pages: 1, fill: 0.55 });
 
     const result = await autoFitRender(FICTIONAL_RESUME, compileTex);
 
-    expect(result).toMatchObject({ ok: true, layout: 'roomy', fill: 0.5, stretched: false });
-    expect(calls).toEqual([{ layout: 'roomy', stretched: false }]);
+    expect(result).toEqual(
+      expect.objectContaining({ ok: true, layout: 'standard', pageCount: 1, fill: 0.55 }),
+    );
+    expect(tried).toEqual(['standard']);
   });
 
-  it('a nearly full page is compiled once more, stretched to the bottom margin', async () => {
-    const { compileTex, calls } = fakeCompiler({}, { pages: 1, fill: 0.9 });
-
-    const result = await autoFitRender(FICTIONAL_RESUME, compileTex);
-
-    expect(result).toMatchObject({ ok: true, layout: 'roomy', stretched: true });
-    expect(calls.map((c) => c.stretched)).toEqual([false, true]);
-  });
-
-  it('walks down to the first layout that fits on one page', async () => {
-    const { compileTex, calls } = fakeCompiler(
-      { roomy: { pages: 2 }, spacious: { pages: 2 }, comfortable: { pages: 1, fill: 0.97 } },
-      { pages: 1, fill: 0.5 },
+  it('moves to a denser layout only when the standard one needs two pages', async () => {
+    const { compileTex, tried } = fakeCompiler(
+      { standard: { pages: 2 }, compact: { pages: 1, fill: 0.97 } },
+      { pages: 1 },
     );
 
     const result = await autoFitRender(FICTIONAL_RESUME, compileTex);
 
-    expect(result).toMatchObject({ ok: true, layout: 'comfortable', pageCount: 1 });
-    expect(calls.map((c) => c.layout)).toEqual(['roomy', 'spacious', 'comfortable', 'comfortable']);
+    expect(result).toMatchObject({ ok: true, layout: 'compact', pageCount: 1 });
+    expect(tried).toEqual(['standard', 'compact']);
   });
 
   it('returns the densest PDF with its real page count when nothing fits', async () => {
-    const { compileTex, calls } = fakeCompiler({}, { pages: 2, fill: 0.4 });
+    const { compileTex, tried } = fakeCompiler({}, { pages: 2, fill: 0.4 });
 
     const result = await autoFitRender(FICTIONAL_RESUME, compileTex);
 
-    expect(result).toMatchObject({ ok: true, layout: 'dense', pageCount: 2, stretched: false });
-    expect(calls).toHaveLength(5);
+    expect(result).toMatchObject({ ok: true, layout: 'dense', pageCount: 2 });
+    expect(tried).toEqual(['standard', 'compact', 'dense']);
   });
 
   it('stops at the first compile error', async () => {
@@ -87,33 +77,9 @@ describe('autoFitRender', () => {
     expect(calls).toBe(1);
   });
 
-  it('keeps the unstretched PDF if stretching somehow makes two pages', async () => {
-    let call = 0;
-    const compileTex: CompileTex = () => {
-      call += 1;
-      const pages = call === 1 ? 1 : 2;
-      return Promise.resolve({
-        ok: true,
-        pdf: Buffer.from(`%PDF-${String(call)}`),
-        pageCount: pages,
-        log: 'TAILEX-FILL 540pt 600pt',
-      });
-    };
+  it('reports fill as null when the log has no marker', async () => {
+    const { compileTex } = fakeCompiler({}, { pages: 1 });
 
-    const result = await autoFitRender(FICTIONAL_RESUME, compileTex);
-
-    expect(result).toMatchObject({ ok: true, pageCount: 1, stretched: false });
-  });
-});
-
-describe('shouldStretch', () => {
-  it.each([
-    [{ pageCount: 1, fill: 0.9 }, true],
-    [{ pageCount: 1, fill: 0.75 }, true],
-    [{ pageCount: 1, fill: 0.74 }, false],
-    [{ pageCount: 1, fill: null }, false],
-    [{ pageCount: 2, fill: 0.95 }, false],
-  ])('%o -> %s', (pdf, expected) => {
-    expect(shouldStretch(pdf)).toBe(expected);
+    expect(await autoFitRender(FICTIONAL_RESUME, compileTex)).toMatchObject({ fill: null });
   });
 });

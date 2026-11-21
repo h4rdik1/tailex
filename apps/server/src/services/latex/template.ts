@@ -19,65 +19,65 @@ export interface RenderedTex {
 
 export interface TemplateOptions {
   layout: Layout;
-  /** Stretch the gaps so the last line sits on the bottom margin (only for nearly full pages). */
-  fillPage: boolean;
 }
 
 interface LayoutProfile {
-  /** Body font size and line distance, in pt. */
-  font: number;
-  leading: number;
-  margin: string;
-  /**
-   * Gaps are TeX "glue": `<natural> plus <can grow> minus <can shrink>`. With \flushbottom,
-   * TeX grows them in proportion to fill the page, so big gaps stay big and small ones small.
-   */
-  sectionGap: string;
+  /** Page margins. */
+  top: string;
+  bottom: string;
+  side: string;
+  /** Bullet and skills text: font size / line distance, in pt (skills lines are a bit airier). */
+  itemFont: number;
+  itemLeading: number;
+  skillsLeading: number;
+  /** Vertical gaps, in pt. Small "minus" values let TeX squeeze a nearly-fitting page. */
+  sectionBefore: string;
+  sectionAfter: string;
   entryGap: string;
   bulletGap: string;
 }
 
-/** Roomiest first. The auto-fit loop (layout.ts) walks down this list until it fits one page. */
+/**
+ * `standard` reproduces the owner's reference design (a Jake's-Resume-style layout, ADR-036),
+ * measured against the original compiled with titlesec/enumitem. `compact` and `dense` shrink it
+ * step by step and are only used when the resume would otherwise need a second page.
+ */
 export const LAYOUT_PROFILES: Record<Layout, LayoutProfile> = {
-  roomy: {
-    font: 11,
-    leading: 14.5,
-    margin: '0.6in',
-    sectionGap: '11pt plus 8pt minus 2pt',
-    entryGap: '7pt plus 5pt minus 1pt',
-    bulletGap: '2.4pt plus 2pt minus 0.6pt',
-  },
-  spacious: {
-    font: 10.5,
-    leading: 13.5,
-    margin: '0.55in',
-    sectionGap: '9pt plus 6pt minus 2pt',
-    entryGap: '6pt plus 4pt minus 1pt',
-    bulletGap: '1.8pt plus 1.5pt minus 0.5pt',
-  },
-  comfortable: {
-    font: 10,
-    leading: 12.6,
-    margin: '0.5in',
-    sectionGap: '7pt plus 5pt minus 2pt',
-    entryGap: '5pt plus 3pt minus 1pt',
-    bulletGap: '1.4pt plus 1.2pt minus 0.4pt',
+  standard: {
+    top: '0.4in',
+    bottom: '0.35in',
+    side: '0.45in',
+    itemFont: 9.8,
+    itemLeading: 12,
+    skillsLeading: 12.5,
+    sectionBefore: '11.5pt plus 3pt minus 1pt',
+    sectionAfter: '8pt',
+    entryGap: '2pt plus 1pt minus 0.5pt',
+    bulletGap: '1.6pt plus 0.5pt minus 0.4pt',
   },
   compact: {
-    font: 9.8,
-    leading: 12,
-    margin: '0.45in',
-    sectionGap: '5pt plus 4pt minus 1pt',
-    entryGap: '4pt plus 2pt minus 1pt',
-    bulletGap: '1pt plus 1pt minus 0.3pt',
+    top: '0.35in',
+    bottom: '0.3in',
+    side: '0.4in',
+    itemFont: 9.5,
+    itemLeading: 11.4,
+    skillsLeading: 11.8,
+    sectionBefore: '9pt plus 2pt minus 1pt',
+    sectionAfter: '6.5pt',
+    entryGap: '1.5pt plus 1pt minus 0.5pt',
+    bulletGap: '1pt plus 0.5pt minus 0.3pt',
   },
   dense: {
-    font: 9.5,
-    leading: 11.4,
-    margin: '0.4in',
-    sectionGap: '4pt plus 3pt minus 1pt',
-    entryGap: '3pt plus 2pt minus 1pt',
-    bulletGap: '0.6pt plus 0.8pt minus 0.2pt',
+    top: '0.3in',
+    bottom: '0.3in',
+    side: '0.35in',
+    itemFont: 9,
+    itemLeading: 10.8,
+    skillsLeading: 11,
+    sectionBefore: '7pt plus 2pt minus 1pt',
+    sectionAfter: '5pt',
+    entryGap: '1pt plus 0.5pt minus 0.3pt',
+    bulletGap: '0.5pt plus 0.3pt minus 0.2pt',
   },
 };
 
@@ -96,7 +96,6 @@ type SafeText = (text: string) => string;
 export function renderResumeTex(resume: ResumeData, options: TemplateOptions): RenderedTex {
   const cleaner = createTextCleaner();
   const safe: SafeText = (text) => escapeLatex(cleaner.clean(text));
-  const profile = LAYOUT_PROFILES[options.layout];
 
   const body = [
     renderHeader(resume.contact, safe),
@@ -108,26 +107,22 @@ export function renderResumeTex(resume: ResumeData, options: TemplateOptions): R
 
   const tex = [
     `% tailex-layout: ${options.layout}`,
-    preamble(profile, options.fillPage),
+    preamble(LAYOUT_PROFILES[options.layout]),
     '\\begin{document}',
-    `\\fontsize{${String(profile.font)}}{${String(profile.leading)}}\\selectfont`,
     ...body,
     // Measure how much of the page the content uses (natural height vs. text area height).
     `\\par\\typeout{${FILL_MARKER} \\the\\pagetotal\\space\\the\\pagegoal}`,
-    // \end{document} ends the page with \vfil, which would soak up all the space. A plain
-    // forced break instead lets \flushbottom stretch our gaps down to the bottom margin.
-    options.fillPage ? '\\penalty-10000' : '',
     '\\end{document}',
     '',
   ].join('\n');
   return { tex, droppedChars: cleaner.droppedChars() };
 }
 
-function preamble(profile: LayoutProfile, fillPage: boolean): string {
+function preamble(p: LayoutProfile): string {
   // Only packages from the minimal TeX Live in Dockerfile.dev (docs/DECISIONS.md ADR-020, ADR-036).
-  // All vertical spacing comes from the three lengths below: no negative \vspace anywhere.
+  // Every vertical gap is one of the named lengths below; there is no negative \vspace.
   return String.raw`\documentclass[letterpaper,10pt]{article}
-\usepackage[letterpaper,margin=${profile.margin}]{geometry}
+\usepackage[letterpaper,top=${p.top},bottom=${p.bottom},left=${p.side},right=${p.side}]{geometry}
 \usepackage[T1]{fontenc}
 \usepackage{lmodern}
 \usepackage[hidelinks]{hyperref}
@@ -140,15 +135,21 @@ function preamble(profile: LayoutProfile, fillPage: boolean): string {
 \setlength{\parindent}{0pt}
 \setlength{\parskip}{0pt}
 \raggedright
-${fillPage ? '\\flushbottom' : '\\raggedbottom'}
-\newlength{\sectiongap}\setlength{\sectiongap}{${profile.sectionGap}}
-\newlength{\entrygap}\setlength{\entrygap}{${profile.entryGap}}
-\newlength{\bulletgap}\setlength{\bulletgap}{${profile.bulletGap}}
+\raggedbottom
+\newlength{\sectionbefore}\setlength{\sectionbefore}{${p.sectionBefore}}
+\newlength{\sectionafter}\setlength{\sectionafter}{${p.sectionAfter}}
+\newlength{\entrygap}\setlength{\entrygap}{${p.entryGap}}
+\newlength{\bulletgap}\setlength{\bulletgap}{${p.bulletGap}}
 \newlength{\entryindent}\setlength{\entryindent}{0.15in}
-% One macro draws every heading, so every underline has the same width and thickness.
-\newcommand{\resumesection}[1]{\par\vspace{\sectiongap}{\large\scshape #1}\par\vspace{1pt}\hrule height 0.4pt\vspace{3pt}}
+\newcommand{\itemfont}{\fontsize{${String(p.itemFont)}}{${String(p.itemLeading)}}\selectfont}
+\newcommand{\skillsfont}{\fontsize{${String(p.itemFont)}}{${String(p.skillsLeading)}}\selectfont}
+% One macro draws every heading, so every underline has the same width, thickness and gap.
+% The \strut gives the title a full line depth, so the rule sits a few points below it.
+\newcommand{\resumesection}[1]{\par\vspace{\sectionbefore}{\large\scshape #1\strut\par}\hrule height 0.4pt\vspace{\sectionafter}}
+% Entries (jobs, projects, schools) are indented under the rule.
 \newenvironment{resumeentries}{\begin{list}{}{\setlength{\leftmargin}{\entryindent}\setlength{\labelwidth}{0pt}\setlength{\labelsep}{0pt}\setlength{\itemindent}{0pt}\setlength{\topsep}{0pt}\setlength{\partopsep}{0pt}\setlength{\parsep}{0pt}\setlength{\itemsep}{\entrygap}}}{\end{list}}
-\newenvironment{resumebullets}{\begin{list}{\small\textbullet}{\setlength{\leftmargin}{1em}\setlength{\labelwidth}{0.6em}\setlength{\labelsep}{0.4em}\setlength{\topsep}{\bulletgap}\setlength{\partopsep}{0pt}\setlength{\parsep}{0pt}\setlength{\itemsep}{\bulletgap}}}{\end{list}}`;
+% Bullets: a small dot hanging just left of the text, text indented under the entry heading.
+\newenvironment{resumebullets}{\begin{list}{$\vcenter{\hbox{\tiny$\bullet$}}$}{\setlength{\leftmargin}{\entryindent}\setlength{\labelsep}{0.5em}\setlength{\topsep}{\bulletgap}\setlength{\partopsep}{0pt}\setlength{\parsep}{0pt}\setlength{\itemsep}{\bulletgap}}\itemfont}{\end{list}}`;
 }
 
 function renderHeader(contact: Contact, safe: SafeText): string {
@@ -158,13 +159,12 @@ function renderHeader(contact: Contact, safe: SafeText): string {
     .concat(contact.links.map((link) => renderLink(link.url, link.label, safe)));
 
   const lines = [
-    isFilled(contact.name) ? `{\\Huge\\scshape\\bfseries ${safe(contact.name)}}\\par` : '',
-    isFilled(contact.name) && details.length > 0 ? '\\vspace{4pt}' : '',
-    // No plain spaces around the separator: equal \enspace gaps on both sides of "|".
-    details.length > 0 ? `{\\small ${details.join('\\enspace\\textbar\\enspace{}')}}\\par` : '',
+    isFilled(contact.name) ? `{\\Huge\\scshape\\bfseries ${safe(contact.name)}\\par}` : '',
+    isFilled(contact.name) && details.length > 0 ? '\\vspace{2pt}' : '',
+    details.length > 0 ? `{\\footnotesize ${details.join(' \\textbar{} ')}\\par}` : '',
   ].filter(isFilled);
 
-  return lines.length === 0 ? '' : `{\\centering\n${lines.join('\n')}\n}`;
+  return lines.length === 0 ? '' : `{\\centering\n${lines.join('\n')}\n}\n\\vspace{3pt}`;
 }
 
 function renderLink(url: string, label: string, safe: SafeText): string {
@@ -195,7 +195,7 @@ function renderSkills(groups: readonly SkillGroup[], safe: SafeText): string {
   return [
     `\\resumesection{${safe('Technical Skills')}}`,
     '\\begin{resumeentries}',
-    `\\item[] ${lines.join('\n')}`,
+    `\\item[] {\\skillsfont ${lines.join('\\\\\n')}\\par}`,
     '\\end{resumeentries}',
   ].join('\n');
 }
@@ -203,9 +203,7 @@ function renderSkills(groups: readonly SkillGroup[], safe: SafeText): string {
 function renderSkillGroup(group: SkillGroup, safe: SafeText): string {
   const items = group.items.filter(isFilled).map(safe).join(', ');
   if (items === '') return '';
-  return isFilled(group.category)
-    ? `\\textbf{${safe(group.category)}}: ${items}\\par`
-    : `${items}\\par`;
+  return isFilled(group.category) ? `\\textbf{${safe(group.category)}}: ${items}` : items;
 }
 
 function renderExperience(entry: Experience, safe: SafeText): string {
@@ -233,9 +231,9 @@ function renderProject(entry: Project, safe: SafeText): string {
   const heading =
     tech === ''
       ? `\\textbf{${safe(entry.name)}}`
-      : `\\textbf{${safe(entry.name)}} \\textbar\\ \\textit{\\small ${tech}}`;
+      : `\\textbf{${safe(entry.name)}} \\textbar{} \\textit{${tech}}`;
   return [
-    `${heading}\\par`,
+    `{\\small ${heading}}\\strut\\par`,
     renderBullets(
       entry.bullets.map((bullet) => bullet.text),
       safe,
@@ -258,9 +256,12 @@ function renderEducation(entry: Education, safe: SafeText): string {
     .join('\n');
 }
 
-/** Left text, then right text pushed to the margin. `\par` ends the line safely even if empty. */
+/**
+ * Left text, then right text pushed to the margin. The \strut reserves a full line height and
+ * depth (like a table row), so a small italic line still keeps even spacing to the next line.
+ */
 function twoColumnLine(left: string, right: string): string {
-  return `${left}\\hfill ${right}\\par`;
+  return `${left}\\hfill ${right}\\strut\\par`;
 }
 
 /** A second line (company/location, degree/years) that is skipped when both sides are empty. */

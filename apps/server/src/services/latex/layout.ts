@@ -3,14 +3,7 @@ import type { CompileResult, CompileTex } from './compile.ts';
 import { parsePageFill } from './log-parser.ts';
 import { FILL_MARKER, renderResumeTex } from './template.ts';
 
-/**
- * Only stretch the gaps to the bottom margin when the page is already this full. Below it the
- * content is genuinely short: stretching would open big holes, so we leave it top-aligned and
- * the UI suggests adding content instead.
- */
-export const STRETCH_FROM_FILL = 0.75;
-
-/** Roomiest first: the order the auto-fit loop tries them in. */
+/** The order the auto-fit loop tries: the reference design first, denser ones only if needed. */
 export const LAYOUT_ORDER: readonly Layout[] = LayoutSchema.options;
 
 export type CompileFailure = Extract<CompileResult, { ok: false }>;
@@ -22,49 +15,36 @@ export interface FittedPdf {
   layout: Layout;
   /** 0–1, or null when it could not be measured. */
   fill: number | null;
-  /** True when the gaps were stretched so the last line sits on the bottom margin. */
-  stretched: boolean;
   droppedChars: string[];
 }
 
 /**
- * "Classifies" a resume by trying it: the roomiest layout that fits on one page wins
- * (docs/DECISIONS.md ADR-036). Measuring real pdflatex output beats guessing from character
- * counts, because line breaks and page breaks in TeX jump in whole lines.
- * A short resume costs 1–2 compiles, a very long one at most 5.
+ * Picks the layout by trying it (docs/DECISIONS.md ADR-036): the standard design if it fits on
+ * one page, otherwise `compact`, then `dense`. A short resume is never stretched or enlarged:
+ * same rhythm always, and the UI suggests adding content when the page is mostly empty.
+ * Measuring real pdflatex output beats guessing from character counts, because TeX breaks
+ * lines and pages in whole lines. Costs 1 compile normally, at most 3.
  */
 export async function autoFitRender(
   resume: ResumeData,
   compileTex: CompileTex,
 ): Promise<FittedPdf | CompileFailure> {
-  let best: FittedPdf | null = null;
-
+  let last: FittedPdf | null = null;
   for (const layout of LAYOUT_ORDER) {
-    const attempt = await compileLayout(resume, layout, false, compileTex);
-    if (!attempt.ok) return attempt;
-    best = attempt;
-    if (attempt.pageCount <= 1) break;
+    const attempt = await compileLayout(resume, layout, compileTex);
+    if (!attempt.ok || attempt.pageCount <= 1) return attempt;
+    last = attempt;
   }
-  if (best === null) throw new Error('LAYOUT_ORDER is empty');
-
-  if (!shouldStretch(best)) return best;
-  const stretched = await compileLayout(resume, best.layout, true, compileTex);
-  // Stretching never adds content, but if anything odd happens, keep the unstretched PDF.
-  return stretched.ok && stretched.pageCount === 1 ? stretched : best;
-}
-
-/** Pure rule, tested on its own: one page, measured, and already nearly full. */
-export function shouldStretch(pdf: Pick<FittedPdf, 'pageCount' | 'fill'>): boolean {
-  return pdf.pageCount === 1 && pdf.fill !== null && pdf.fill >= STRETCH_FROM_FILL;
+  if (last === null) throw new Error('LAYOUT_ORDER is empty');
+  return last; // even `dense` needs more than one page: the UI asks the user to shorten
 }
 
 async function compileLayout(
   resume: ResumeData,
   layout: Layout,
-  fillPage: boolean,
   compileTex: CompileTex,
 ): Promise<FittedPdf | CompileFailure> {
-  const { tex, droppedChars } = renderResumeTex(resume, { layout, fillPage });
+  const { tex, droppedChars } = renderResumeTex(resume, { layout });
   const result = await compileTex(tex);
   if (!result.ok) return result;
   return {
@@ -73,7 +53,6 @@ async function compileLayout(
     pageCount: result.pageCount,
     layout,
     fill: parsePageFill(result.log, FILL_MARKER),
-    stretched: fillPage,
     droppedChars,
   };
 }

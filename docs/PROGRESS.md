@@ -55,7 +55,7 @@ Built on branch `phase-3` while the owner was away (not merged to `main`).
 - [x] Upload + "See what's sent" + review form
 - [x] PDF preview (split view / mobile tabs), cold-start state
 - [x] Sample mode → **v1**
-- [x] Template restyle (US Letter, Skills first) + auto-fit layout that fills one page (ADR-036)
+- [x] Template matched to the reference design (US Letter, Skills first) + auto-fit layouts for long resumes (ADR-036)
 
 ## Phase 5 — Tailoring (v1.1)
 

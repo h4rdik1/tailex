@@ -6,7 +6,7 @@ import {
   type TemplateOptions,
 } from '../src/services/latex/template.ts';
 
-const BASE: TemplateOptions = { layout: 'comfortable', fillPage: false };
+const BASE: TemplateOptions = { layout: 'standard' };
 
 /** Only packages from the minimal TeX Live in the Docker image (ADR-020, ADR-036). */
 const ALLOWED_PACKAGES = ['geometry', 'fontenc', 'lmodern', 'hyperref'];
@@ -16,53 +16,42 @@ function texFor(resume: ResumeData = FICTIONAL_RESUME, options = BASE): string {
 }
 
 describe('renderResumeTex: page setup', () => {
-  it('uses US Letter and only the allowed packages', () => {
+  it('uses US Letter, the reference margins and only the allowed packages', () => {
     const tex = texFor();
     const packages = [...tex.matchAll(/\\usepackage(?:\[[^\]]*\])?\{([^}]+)\}/g)].map((m) => m[1]);
 
     expect(tex).toContain('\\documentclass[letterpaper,10pt]{article}');
-    expect(tex).toContain('letterpaper,margin=0.5in');
+    expect(tex).toContain('letterpaper,top=0.4in,bottom=0.35in,left=0.45in,right=0.45in');
     expect(packages).toEqual(ALLOWED_PACKAGES);
   });
 
   it('never uses negative vertical space (the cause of overlapping lines)', () => {
     for (const layout of LayoutSchema.options) {
-      for (const fillPage of [false, true]) {
-        expect(texFor(FICTIONAL_RESUME, { layout, fillPage })).not.toMatch(/\\vspace\*?\{\s*-/);
-      }
+      expect(texFor(FICTIONAL_RESUME, { layout })).not.toMatch(/\\vspace\*?\{\s*-/);
     }
   });
 
-  it('has a profile for every layout, each with elastic gaps', () => {
+  it('never stretches a short resume: the page bottom stays ragged', () => {
     for (const layout of LayoutSchema.options) {
-      const profile = LAYOUT_PROFILES[layout];
-      expect(profile.sectionGap).toMatch(/plus .* minus/);
-      expect(profile.entryGap).toMatch(/plus .* minus/);
-      expect(profile.bulletGap).toMatch(/plus .* minus/);
+      const tex = texFor(FICTIONAL_RESUME, { layout });
+      expect(tex).toContain('\\raggedbottom');
+      expect(tex).not.toContain('\\flushbottom');
     }
   });
 
-  it('profiles get denser in order: smaller font, smaller margin', () => {
+  it('later layouts are denser: smaller text, smaller margins, smaller gaps', () => {
     const profiles = LayoutSchema.options.map((layout) => LAYOUT_PROFILES[layout]);
     for (let i = 1; i < profiles.length; i += 1) {
       const [roomier, denser] = [profiles[i - 1], profiles[i]];
-      expect(denser?.font).toBeLessThan(roomier?.font ?? 0);
-      expect(parseFloat(denser?.margin ?? '')).toBeLessThan(parseFloat(roomier?.margin ?? ''));
+      if (!roomier || !denser) throw new Error('missing profile');
+      expect(denser.itemFont).toBeLessThan(roomier.itemFont);
+      expect(parseFloat(denser.side)).toBeLessThan(parseFloat(roomier.side));
+      expect(parseFloat(denser.sectionBefore)).toBeLessThan(parseFloat(roomier.sectionBefore));
     }
   });
 
-  it('stretches to the bottom margin only when asked', () => {
-    const ragged = texFor(FICTIONAL_RESUME, { layout: 'roomy', fillPage: false });
-    const filled = texFor(FICTIONAL_RESUME, { layout: 'roomy', fillPage: true });
-
-    expect(ragged).toContain('\\raggedbottom');
-    expect(ragged).not.toContain('\\penalty-10000');
-    expect(filled).toContain('\\flushbottom');
-    expect(filled).toContain('\\penalty-10000');
-  });
-
   it('writes the fill marker and the layout name', () => {
-    const tex = texFor(FICTIONAL_RESUME, { layout: 'dense', fillPage: false });
+    const tex = texFor(FICTIONAL_RESUME, { layout: 'dense' });
 
     expect(tex).toContain('\\typeout{TAILEX-FILL \\the\\pagetotal\\space\\the\\pagegoal}');
     expect(tex.split('\n')[0]).toBe('% tailex-layout: dense');
@@ -102,7 +91,8 @@ describe('renderResumeTex: sections', () => {
     job.company = '';
     job.location = '';
 
-    expect(texFor(resume)).not.toContain('\\hfill \\par');
+    // An empty second line would start with \hfill (nothing on the left side).
+    expect(texFor(resume)).not.toMatch(/^\\hfill /m);
   });
 
   it('still escapes user text (no raw LaTeX gets through)', () => {
