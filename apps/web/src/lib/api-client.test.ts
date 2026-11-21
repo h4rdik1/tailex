@@ -57,7 +57,7 @@ describe('api-client: where the key goes', () => {
       headers: {
         'x-page-count': '1',
         'x-render-warnings': encodeURIComponent('["🚀"]'),
-        'x-layout': 'compact',
+        'x-layout': '9',
         'x-page-fill': '93',
       },
     });
@@ -68,13 +68,13 @@ describe('api-client: where the key goes', () => {
     expect(JSON.stringify(seen[0]?.init)).not.toContain(KEY);
     expect(headersOf(seen[0])['x-llm-key']).toBeUndefined();
     expect(JSON.parse(seen[0]?.init.body as string)).toEqual({ resume: FICTIONAL_RESUME });
-    expect(result).toMatchObject({ pageCount: 1, layout: 'compact', fill: 0.93 });
+    expect(result).toMatchObject({ pageCount: 1, layout: 9, fill: 0.93 });
     expect(result.droppedChars).toEqual(['🚀']);
   });
 
   it('treats a missing or unknown layout and fill as unknown (null)', async () => {
     const pdf = new Response(new Blob(['%PDF-']), {
-      headers: { 'x-page-count': '1', 'x-layout': 'huge', 'x-page-fill': 'abc' },
+      headers: { 'x-page-count': '1', 'x-layout': '99', 'x-page-fill': 'abc' },
     });
     const { client } = setup(pdf);
 

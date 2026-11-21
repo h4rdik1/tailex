@@ -72,7 +72,7 @@ describe('POST /api/render: rendering (needs escapeLatex)', () => {
     expect(res.status).toBe(200);
     expect(res.headers['content-type']).toBe('application/pdf');
     expect(res.headers[RENDER_HEADERS.pageCount]).toBe('1');
-    expect(res.headers[RENDER_HEADERS.layout]).toBe('standard'); // fits at once: the standard design
+    expect(res.headers[RENDER_HEADERS.layout]).toBe('14'); // the fake compiler always fits, so the largest size wins
     expect(res.headers[RENDER_HEADERS.pageFill]).toBeUndefined(); // the fake log has no marker
     expect(JSON.parse(decodeURIComponent(String(res.headers[RENDER_HEADERS.warnings])))).toEqual([
       '🚀',
@@ -146,11 +146,16 @@ describe('POST /api/render: rendering (needs escapeLatex)', () => {
     const started = new Promise<void>((resolve) => {
       firstStarted = resolve;
     });
-    const compileTex: CompileTex = () =>
-      new Promise((resolve) => {
+    // Auto-fit compiles several times per request: only the FIRST compile blocks.
+    let compiles = 0;
+    const compileTex: CompileTex = () => {
+      compiles += 1;
+      if (compiles > 1) return Promise.resolve(okResult());
+      return new Promise((resolve) => {
         finishFirst = resolve;
         firstStarted();
       });
+    };
     const app = createApp({ compileTex, maxConcurrentCompiles: 1 });
 
     const first = request(app)

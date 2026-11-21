@@ -64,7 +64,7 @@ export function createRenderRouter({ compileTex, limiter }: RenderRouteDeps): Ro
         .status(200)
         .type('application/pdf')
         .set(RENDER_HEADERS.pageCount, String(result.pageCount))
-        .set(RENDER_HEADERS.layout, result.layout)
+        .set(RENDER_HEADERS.layout, String(result.layout))
         // Header values must be ASCII; dropped characters are often emoji, so URI-encode them.
         .set(RENDER_HEADERS.warnings, encodeURIComponent(JSON.stringify(result.droppedChars)));
       if (result.fill !== null) {

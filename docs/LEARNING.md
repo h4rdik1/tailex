@@ -390,38 +390,44 @@ memory. If the server says `503 BUSY` (both pdflatex slots in use), the hook wai
 - **How do you stop an old slow request from overwriting a newer one?** A request counter in a
   ref: each render takes a number, and only the latest number may update state.
 
-### Auto-fit layout: "one page, same rhythm"
+### Auto-fit: one design, scaled to fill the page
 
 **The problem you spotted:** the same content looked half-empty or oddly spaced compared with your
-own template. Two lessons came out of fixing it:
+own template. Three lessons came out of fixing it:
 
 1. **Match a reference by measuring, not by eye.** We compiled your real template (with
-   `titlesec`/`enumitem`, in a throwaway container) and ours, with the same fictional content.
+   `titlesec`/`enumitem`, in a throwaway container) and ours with the same fictional content.
    Both print `\the\pagetotal` (how far down the page TeX is) before every section, so we could
-   see that, for example, our Experience section was 30pt shorter and why: the underline sat too
-   close to the title, the gap under the rule was 2pt short, and your heading rows are table rows
-   that always reserve a full line (a **strut**). Each fix was checked against the numbers.
-2. **Don't stretch to fill.** A first version enlarged the font and stretched every gap
-   (`\flushbottom`) on short resumes. It "filled" the page, but bullets drifted apart and each
-   resume looked different. Now the design stays fixed; short content simply ends early, and the
-   app says "there is room for another project".
+   compare section heights in points and tune until they matched.
+2. **Don't stretch gaps to fill a page.** A first version stretched every gap (`\flushbottom`);
+   it "filled" the page but bullets drifted apart. A second version left white space; you
+   rejected that too. The fix is neither.
+3. **Scale the whole design.** Every measurement (fonts, line distance, gaps, margins) is the
+   reference value times one factor `s`. `s = 1.00` is your template; each level is 2 % bigger or
+   smaller. Everything grows together, so the look and rhythm never change, only the size.
 
-**Glue, in one line:** a gap like `11.5pt plus 3pt minus 1pt` is a spring. We keep small `minus`
+**Picking the size (`layout.ts`):** we want the largest level that still fits one page. A bigger
+size never fits when a smaller one doesn't, so we **binary search** the 14 levels using the real
+page count from pdflatex: try the middle one, go up if it fits, down if it doesn't. That's 4
+compiles, not 14. Short resume: biggest size. Long resume: shrunk until it fits.
+
+**Glue, in one line:** a gap like `8pt plus 3pt minus 1pt` is a spring. We keep small `minus`
 values so TeX can squeeze a page that is _just_ too long, but we never ask it to stretch.
 
-**The loop (`layout.ts`):** compile `standard`; 2 pages? try `compact`, then `dense`. The first
-1-page result wins; if even `dense` needs 2 pages, the app asks you to shorten bullets.
+**A bug the measuring caught:** a strut (an invisible line-height ruler) taken from the big
+heading font made every heading 5pt too tall. The numbers showed it; eyes would not.
 
 ### Interview Q&A (auto-fit)
 
 - **How did you make your template match a reference design?** Compiled both with the same
   content, logged `\pagetotal` at each section, compared, tuned, re-measured. Numbers, not
   screenshots.
-- **Why compile several times instead of estimating size from character counts?** TeX breaks
-  lines and pages in whole lines, so estimates are wrong by whole sections. A compile takes well
-  under a second.
+- **Why a binary search?** Fitting is monotonic: if size n fits, every smaller one does too. So
+  searching 14 levels takes log2(14) ≈ 4 compiles instead of up to 14.
+- **Why scale everything instead of just the font?** Changing only one thing (font, or gaps)
+  changes the proportions, which is what looked wrong. One factor keeps all proportions fixed.
 - **How do you test it without pdflatex?** `autoFitRender` takes the compiler as a parameter; the
-  test passes a fake that answers "2 pages" or "fill 0.55" per layout and checks the order tried.
+  test passes a fake that "fits" up to a chosen level and checks the search finds exactly it.
 - **Why no `titlesec`/`enumitem`?** Not in our minimal TeX Live; base LaTeX lists, `\hrule` and
   struts give the same look without hundreds of MB in the image.
 

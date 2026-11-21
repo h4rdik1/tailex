@@ -1,11 +1,3 @@
-import type { Layout } from '@tailex/shared';
-
-export const LAYOUT_LABELS: Record<Layout, string> = {
-  standard: 'Standard',
-  compact: 'Compact',
-  dense: 'Dense',
-};
-
 /** Below this the page looks noticeably empty, so we suggest adding content. */
 export const LOW_FILL = 0.75;
 
@@ -19,7 +11,7 @@ export function pdfHint(pdf: { pageCount: number; fill: number | null }): PdfHin
   if (pdf.pageCount > 1) {
     return {
       tone: 'warning',
-      text: 'Too long for one page, even with the most compact layout. Shorten or remove a few bullets.',
+      text: 'Too long for one page, even at the smallest size. Shorten or remove a few bullets.',
     };
   }
   if (pdf.fill !== null && pdf.fill < LOW_FILL) {

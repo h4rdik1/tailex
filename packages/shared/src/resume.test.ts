@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { RESUME_LIMITS, ResumeDataSchema, SAFE_URL_PATTERN } from './resume.ts';
-import { LayoutSchema, RenderRequestSchema } from './render.ts';
+import { LAYOUT_LEVELS, LayoutSchema, RenderRequestSchema } from './render.ts';
 import { FICTIONAL_RESUME } from './samples/fictional-resume.ts';
 
 describe('ResumeDataSchema', () => {
@@ -58,7 +58,11 @@ describe('RenderRequestSchema', () => {
 });
 
 describe('LayoutSchema', () => {
-  it('lists layouts in auto-fit order: the standard design, then denser ones', () => {
-    expect(LayoutSchema.options).toEqual(['standard', 'compact', 'dense']);
+  it('accepts size levels 1 to LAYOUT_LEVELS and nothing else', () => {
+    expect(LayoutSchema.safeParse(1).success).toBe(true);
+    expect(LayoutSchema.safeParse(LAYOUT_LEVELS).success).toBe(true);
+    expect(LayoutSchema.safeParse(0).success).toBe(false);
+    expect(LayoutSchema.safeParse(LAYOUT_LEVELS + 1).success).toBe(false);
+    expect(LayoutSchema.safeParse(2.5).success).toBe(false);
   });
 });

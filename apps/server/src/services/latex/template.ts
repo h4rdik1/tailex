@@ -18,69 +18,55 @@ export interface RenderedTex {
 }
 
 export interface TemplateOptions {
+  /** Size level, 1 (smallest) to LAYOUT_LEVELS. See `scaleFor`. */
   layout: Layout;
 }
 
-interface LayoutProfile {
-  /** Page margins. */
-  top: string;
-  bottom: string;
-  side: string;
-  /** Bullet and skills text: font size / line distance, in pt (skills lines are a bit airier). */
-  itemFont: number;
-  itemLeading: number;
-  skillsLeading: number;
-  /** Vertical gaps, in pt. Small "minus" values let TeX squeeze a nearly-fitting page. */
-  sectionBefore: string;
-  sectionAfter: string;
-  entryGap: string;
-  bulletGap: string;
+/** Level 6 is exactly the reference design (scale 1.00); each level is 2% larger or smaller. */
+export const REFERENCE_LEVEL = 6;
+const SCALE_STEP = 0.02;
+
+export function scaleFor(level: Layout): number {
+  return 1 + (level - REFERENCE_LEVEL) * SCALE_STEP;
+}
+
+/** Rounded to 2 decimals, so the .tex stays readable and identical numbers print identically. */
+function r(value: number, decimals = 2): string {
+  return String(Number(value.toFixed(decimals)));
 }
 
 /**
- * `standard` reproduces the owner's reference design (a Jake's-Resume-style layout, ADR-036),
- * measured against the original compiled with titlesec/enumitem. `compact` and `dense` shrink it
- * step by step and are only used when the resume would otherwise need a second page.
+ * Every measurement of the reference design (a Jake's-Resume-style layout, ADR-036, measured
+ * against the original compiled with titlesec/enumitem), multiplied by ONE scale factor.
+ * Font, line spacing, gaps and margins all grow together, so every size has the same look and
+ * rhythm. Small "minus" values in the gaps let TeX squeeze a page that is just too long.
  */
-export const LAYOUT_PROFILES: Record<Layout, LayoutProfile> = {
-  standard: {
-    top: '0.4in',
-    bottom: '0.35in',
-    side: '0.45in',
-    itemFont: 9.8,
-    itemLeading: 12,
-    skillsLeading: 12.5,
-    sectionBefore: '11.5pt plus 3pt minus 1pt',
-    sectionAfter: '8pt',
-    entryGap: '2pt plus 1pt minus 0.5pt',
-    bulletGap: '1.6pt plus 0.5pt minus 0.4pt',
-  },
-  compact: {
-    top: '0.35in',
-    bottom: '0.3in',
-    side: '0.4in',
-    itemFont: 9.5,
-    itemLeading: 11.4,
-    skillsLeading: 11.8,
-    sectionBefore: '9pt plus 2pt minus 1pt',
-    sectionAfter: '6.5pt',
-    entryGap: '1.5pt plus 1pt minus 0.5pt',
-    bulletGap: '1pt plus 0.5pt minus 0.3pt',
-  },
-  dense: {
-    top: '0.3in',
-    bottom: '0.3in',
-    side: '0.35in',
-    itemFont: 9,
-    itemLeading: 10.8,
-    skillsLeading: 11,
-    sectionBefore: '7pt plus 2pt minus 1pt',
-    sectionAfter: '5pt',
-    entryGap: '1pt plus 0.5pt minus 0.3pt',
-    bulletGap: '0.5pt plus 0.3pt minus 0.2pt',
-  },
-};
-
+export function layoutFor(level: Layout) {
+  const s = scaleFor(level);
+  const glue = (natural: number, grow: number, shrink: number): string =>
+    `${r(natural * s)}pt plus ${r(grow * s)}pt minus ${r(shrink * s)}pt`;
+  return {
+    top: `${r(0.4 * s, 3)}in`,
+    bottom: `${r(0.35 * s, 3)}in`,
+    side: `${r(0.45 * s, 3)}in`,
+    baseFont: `${r(10 * s)}}{${r(12 * s)}`,
+    itemFont: `${r(9.8 * s)}}{${r(12 * s)}`,
+    skillsFont: `${r(9.8 * s)}}{${r(12.5 * s)}`,
+    smallFont: `${r(9 * s)}}{${r(11 * s)}`,
+    contactFont: `${r(8 * s)}}{${r(9.5 * s)}`,
+    headingFont: `${r(14.4 * s)}}{${r(18 * s)}`,
+    nameFont: `${r(24.88 * s)}}{${r(30 * s)}`,
+    sectionBefore: glue(8, 3, 1),
+    sectionAfter: `${r(8 * s)}pt`,
+    entryGap: glue(2, 1, 0.5),
+    bulletGap: glue(1.6, 0.5, 0.4),
+    strutHeight: `${r(8.4 * s)}pt`,
+    strutDepth: `${r(3.6 * s)}pt`,
+    afterName: `${r(2 * s)}pt`,
+    afterHeader: `${r(3 * s)}pt`,
+  };
+}
+type LayoutValues = ReturnType<typeof layoutFor>;
 /** Written to the log at the end, so the server can measure how full the page is. */
 export const FILL_MARKER = 'TAILEX-FILL';
 
@@ -106,9 +92,10 @@ export function renderResumeTex(resume: ResumeData, options: TemplateOptions): R
   ].filter(isFilled);
 
   const tex = [
-    `% tailex-layout: ${options.layout}`,
-    preamble(LAYOUT_PROFILES[options.layout]),
+    `% tailex-layout: ${String(options.layout)}`,
+    preamble(layoutFor(options.layout)),
     '\\begin{document}',
+    '\\basefont',
     ...body,
     // Measure how much of the page the content uses (natural height vs. text area height).
     `\\par\\typeout{${FILL_MARKER} \\the\\pagetotal\\space\\the\\pagegoal}`,
@@ -118,7 +105,7 @@ export function renderResumeTex(resume: ResumeData, options: TemplateOptions): R
   return { tex, droppedChars: cleaner.droppedChars() };
 }
 
-function preamble(p: LayoutProfile): string {
+function preamble(p: LayoutValues): string {
   // Only packages from the minimal TeX Live in Dockerfile.dev (docs/DECISIONS.md ADR-020, ADR-036).
   // Every vertical gap is one of the named lengths below; there is no negative \vspace.
   return String.raw`\documentclass[letterpaper,10pt]{article}
@@ -140,12 +127,22 @@ function preamble(p: LayoutProfile): string {
 \newlength{\sectionafter}\setlength{\sectionafter}{${p.sectionAfter}}
 \newlength{\entrygap}\setlength{\entrygap}{${p.entryGap}}
 \newlength{\bulletgap}\setlength{\bulletgap}{${p.bulletGap}}
+\newlength{\afternamegap}\setlength{\afternamegap}{${p.afterName}}
+\newlength{\afterheadergap}\setlength{\afterheadergap}{${p.afterHeader}}
 \newlength{\entryindent}\setlength{\entryindent}{0.15in}
-\newcommand{\itemfont}{\fontsize{${String(p.itemFont)}}{${String(p.itemLeading)}}\selectfont}
-\newcommand{\skillsfont}{\fontsize{${String(p.itemFont)}}{${String(p.skillsLeading)}}\selectfont}
+% Every text size is scaled with everything else (see layoutFor), not taken from the class.
+\newcommand{\basefont}{\fontsize{${p.baseFont}}\selectfont}
+\newcommand{\itemfont}{\fontsize{${p.itemFont}}\selectfont}
+\newcommand{\skillsfont}{\fontsize{${p.skillsFont}}\selectfont}
+\newcommand{\smallfont}{\fontsize{${p.smallFont}}\selectfont}
+\newcommand{\contactfont}{\fontsize{${p.contactFont}}\selectfont}
+\newcommand{\headingfont}{\fontsize{${p.headingFont}}\selectfont}
+\newcommand{\namefont}{\fontsize{${p.nameFont}}\selectfont}
+% A strut reserves a full 12pt-style line (scaled), like a table row, whatever the font size.
+\newcommand{\sstrut}{\vrule width 0pt height ${p.strutHeight} depth ${p.strutDepth}}
 % One macro draws every heading, so every underline has the same width, thickness and gap.
-% The \strut gives the title a full line depth, so the rule sits a few points below it.
-\newcommand{\resumesection}[1]{\par\vspace{\sectionbefore}{\large\scshape #1\strut\par}\hrule height 0.4pt\vspace{\sectionafter}}
+% The strut gives the title a full line depth, so the rule sits a few points below it.
+\newcommand{\resumesection}[1]{\par\vspace{\sectionbefore}{\headingfont\scshape #1\sstrut\par}\hrule height 0.4pt\vspace{\sectionafter}}
 % Entries (jobs, projects, schools) are indented under the rule.
 \newenvironment{resumeentries}{\begin{list}{}{\setlength{\leftmargin}{\entryindent}\setlength{\labelwidth}{0pt}\setlength{\labelsep}{0pt}\setlength{\itemindent}{0pt}\setlength{\topsep}{0pt}\setlength{\partopsep}{0pt}\setlength{\parsep}{0pt}\setlength{\itemsep}{\entrygap}}}{\end{list}}
 % Bullets: a small dot hanging just left of the text, text indented under the entry heading.
@@ -159,12 +156,14 @@ function renderHeader(contact: Contact, safe: SafeText): string {
     .concat(contact.links.map((link) => renderLink(link.url, link.label, safe)));
 
   const lines = [
-    isFilled(contact.name) ? `{\\Huge\\scshape\\bfseries ${safe(contact.name)}\\par}` : '',
-    isFilled(contact.name) && details.length > 0 ? '\\vspace{2pt}' : '',
-    details.length > 0 ? `{\\footnotesize ${details.join(' \\textbar{} ')}\\par}` : '',
+    isFilled(contact.name) ? `{\\namefont\\scshape\\bfseries ${safe(contact.name)}\\par}` : '',
+    isFilled(contact.name) && details.length > 0 ? '\\vspace{\\afternamegap}' : '',
+    details.length > 0 ? `{\\contactfont ${details.join(' \\textbar{} ')}\\par}` : '',
   ].filter(isFilled);
 
-  return lines.length === 0 ? '' : `{\\centering\n${lines.join('\n')}\n}\n\\vspace{3pt}`;
+  return lines.length === 0
+    ? ''
+    : `{\\centering\n${lines.join('\n')}\n}\n\\vspace{\\afterheadergap}`;
 }
 
 function renderLink(url: string, label: string, safe: SafeText): string {
@@ -215,7 +214,7 @@ function renderExperience(entry: Experience, safe: SafeText): string {
     optionalTwoColumnLine(
       entry.company,
       entry.location,
-      (text) => `\\textit{\\small ${safe(text)}}`,
+      (text) => `\\textit{\\smallfont ${safe(text)}}`,
     ),
     renderBullets(
       entry.bullets.map((bullet) => bullet.text),
@@ -233,7 +232,7 @@ function renderProject(entry: Project, safe: SafeText): string {
       ? `\\textbf{${safe(entry.name)}}`
       : `\\textbf{${safe(entry.name)}} \\textbar{} \\textit{${tech}}`;
   return [
-    `{\\small ${heading}}\\strut\\par`,
+    `{\\smallfont ${heading}}\\sstrut\\par`,
     renderBullets(
       entry.bullets.map((bullet) => bullet.text),
       safe,
@@ -249,7 +248,7 @@ function renderEducation(entry: Education, safe: SafeText): string {
     optionalTwoColumnLine(
       entry.degree,
       dateRange(entry.startYear, entry.endYear),
-      (text) => `\\textit{\\small ${safe(text)}}`,
+      (text) => `\\textit{\\smallfont ${safe(text)}}`,
     ),
   ]
     .filter(isFilled)
@@ -261,7 +260,7 @@ function renderEducation(entry: Education, safe: SafeText): string {
  * depth (like a table row), so a small italic line still keeps even spacing to the next line.
  */
 function twoColumnLine(left: string, right: string): string {
-  return `${left}\\hfill ${right}\\strut\\par`;
+  return `${left}\\hfill ${right}\\sstrut\\par`;
 }
 
 /** A second line (company/location, degree/years) that is skipped when both sides are empty. */

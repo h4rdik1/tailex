@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { FICTIONAL_RESUME, type ResumeData } from '@tailex/shared';
+import { FICTIONAL_RESUME, LAYOUT_LEVELS, type ResumeData } from '@tailex/shared';
 import { compileTex, type CompileResult } from '../src/services/latex/compile.ts';
 import { autoFitRender } from '../src/services/latex/layout.ts';
 import { parsePageFill } from '../src/services/latex/log-parser.ts';
-import { FILL_MARKER, renderResumeTex } from '../src/services/latex/template.ts';
+import { FILL_MARKER, REFERENCE_LEVEL, renderResumeTex } from '../src/services/latex/template.ts';
 import { hasPdflatex } from './helpers/pdflatex.ts';
 import { extractPdfText } from './helpers/pdf-text.ts';
 import { INJECTION_PAYLOADS } from './helpers/payloads.ts';
@@ -14,7 +14,7 @@ function expectOk(result: CompileResult): Extract<CompileResult, { ok: true }> {
 }
 
 async function renderPdf(resume: ResumeData) {
-  const { tex, droppedChars } = renderResumeTex(resume, { layout: 'standard' });
+  const { tex, droppedChars } = renderResumeTex(resume, { layout: REFERENCE_LEVEL });
   return { result: expectOk(await compileTex(tex)), droppedChars };
 }
 
@@ -112,33 +112,35 @@ describe.skipIf(!hasPdflatex)('resume template → PDF (needs escapeLatex)', () 
   });
 });
 
-/** The auto-fit loop against real pdflatex: the "classification" the user sees. */
+/** The auto-fit search against real pdflatex: what the user actually gets. */
 describe.skipIf(!hasPdflatex)('autoFitRender with real pdflatex', () => {
-  it('a short resume keeps the standard design, top-aligned with room to spare', async () => {
+  it('a short resume is enlarged to the biggest size, and the UI suggests adding content', async () => {
     const result = await autoFitRender(FICTIONAL_RESUME, compileTex);
 
-    expect(result).toMatchObject({ ok: true, layout: 'standard', pageCount: 1 });
-    expect(result.ok && result.fill).toBeLessThan(0.75); // the UI suggests adding content
+    expect(result).toMatchObject({ ok: true, layout: LAYOUT_LEVELS, pageCount: 1 });
+    expect(result.ok && result.fill).toBeLessThan(0.75);
   });
 
-  it('a well-filled resume keeps the standard design', async () => {
-    const result = await autoFitRender(withJobs(3, 5), compileTex);
+  it('a medium resume gets a large size and a nearly full page', async () => {
+    const result = await autoFitRender(withJobs(2, 5), compileTex);
 
-    expect(result).toMatchObject({ ok: true, layout: 'standard', pageCount: 1 });
+    expect(result).toMatchObject({ ok: true, pageCount: 1 });
+    expect(result.ok && result.layout).toBeGreaterThanOrEqual(10);
     expect(result.ok && result.fill).toBeGreaterThan(0.85);
   });
 
-  it('a long resume moves to a denser layout and still fits one page', async () => {
-    const result = await autoFitRender(withJobs(5, 5), compileTex);
+  it('a long resume is shrunk until it fits one page, and fills it', async () => {
+    const result = await autoFitRender(withJobs(4, 5), compileTex);
 
-    expect(result.ok && result.layout).not.toBe('standard');
     expect(result).toMatchObject({ ok: true, pageCount: 1 });
+    expect(result.ok && result.layout).toBeLessThan(REFERENCE_LEVEL + 3);
+    expect(result.ok && result.fill).toBeGreaterThan(0.9);
   });
 
-  it('a resume too long for any layout comes back dense, with its real page count', async () => {
+  it('a resume too long even for the smallest size comes back at size 1 with 2 pages', async () => {
     const result = await autoFitRender(withJobs(9, 8), compileTex);
 
-    expect(result).toMatchObject({ ok: true, layout: 'dense' });
+    expect(result).toMatchObject({ ok: true, layout: 1 });
     expect(result.ok && result.pageCount).toBeGreaterThan(1);
   });
 });

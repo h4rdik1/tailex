@@ -1,8 +1,9 @@
 import { Download, ExternalLink, RefreshCw } from 'lucide-react';
+import { LAYOUT_LEVELS } from '@tailex/shared';
 import { Button } from '../../components/ui/button.tsx';
 import { Card, CardContent } from '../../components/ui/card.tsx';
 import { Badge } from '../../components/ui/misc.tsx';
-import { LAYOUT_LABELS, pdfHint } from './pdf-hints.ts';
+import { pdfHint } from './pdf-hints.ts';
 import type { RenderState } from './usePdfRender.ts';
 
 export const PDF_FILE_NAME = 'resume.pdf';
@@ -33,7 +34,7 @@ export function PdfPanel({ state, outOfDate, blocked, onRender }: PdfPanelProps)
         {state.status === 'ready' && (
           <Badge tone={state.pageCount === 1 ? 'success' : 'warning'}>
             {state.pageCount === 1 ? '1 page' : `${String(state.pageCount)} pages`}
-            {state.layout && ` · ${LAYOUT_LABELS[state.layout]} layout`}
+            {state.layout !== null && ` · size ${String(state.layout)}/${String(LAYOUT_LEVELS)}`}
           </Badge>
         )}
       </div>

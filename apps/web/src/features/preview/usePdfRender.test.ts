@@ -8,7 +8,7 @@ const FAST = { busyRetryMs: 1 };
 
 function pdfResult(pageCount = 1): RenderedPdf {
   const pdf = new Blob(['%PDF-'], { type: 'application/pdf' });
-  return { pdf, pageCount, droppedChars: [], layout: 'standard', fill: 0.9 };
+  return { pdf, pageCount, droppedChars: [], layout: 9, fill: 0.9 };
 }
 
 // jsdom has no blob URLs, so we provide simple fakes and count calls.

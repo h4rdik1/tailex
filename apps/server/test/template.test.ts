@@ -1,22 +1,25 @@
 import { describe, expect, it } from 'vitest';
-import { FICTIONAL_RESUME, LayoutSchema, type ResumeData } from '@tailex/shared';
+import { FICTIONAL_RESUME, LAYOUT_LEVELS, type ResumeData } from '@tailex/shared';
 import {
-  LAYOUT_PROFILES,
+  layoutFor,
+  REFERENCE_LEVEL,
   renderResumeTex,
+  scaleFor,
   type TemplateOptions,
 } from '../src/services/latex/template.ts';
 
-const BASE: TemplateOptions = { layout: 'standard' };
+const BASE: TemplateOptions = { layout: REFERENCE_LEVEL };
 
 /** Only packages from the minimal TeX Live in the Docker image (ADR-020, ADR-036). */
 const ALLOWED_PACKAGES = ['geometry', 'fontenc', 'lmodern', 'hyperref'];
+const LEVELS = Array.from({ length: LAYOUT_LEVELS }, (_, i) => i + 1);
 
 function texFor(resume: ResumeData = FICTIONAL_RESUME, options = BASE): string {
   return renderResumeTex(resume, options).tex;
 }
 
 describe('renderResumeTex: page setup', () => {
-  it('uses US Letter, the reference margins and only the allowed packages', () => {
+  it('uses US Letter, the reference margins at the reference level, and only allowed packages', () => {
     const tex = texFor();
     const packages = [...tex.matchAll(/\\usepackage(?:\[[^\]]*\])?\{([^}]+)\}/g)].map((m) => m[1]);
 
@@ -26,35 +29,49 @@ describe('renderResumeTex: page setup', () => {
   });
 
   it('never uses negative vertical space (the cause of overlapping lines)', () => {
-    for (const layout of LayoutSchema.options) {
+    for (const layout of LEVELS) {
       expect(texFor(FICTIONAL_RESUME, { layout })).not.toMatch(/\\vspace\*?\{\s*-/);
     }
   });
 
-  it('never stretches a short resume: the page bottom stays ragged', () => {
-    for (const layout of LayoutSchema.options) {
+  it('never stretches the page: the bottom stays ragged at every size', () => {
+    for (const layout of LEVELS) {
       const tex = texFor(FICTIONAL_RESUME, { layout });
       expect(tex).toContain('\\raggedbottom');
       expect(tex).not.toContain('\\flushbottom');
     }
   });
 
-  it('later layouts are denser: smaller text, smaller margins, smaller gaps', () => {
-    const profiles = LayoutSchema.options.map((layout) => LAYOUT_PROFILES[layout]);
-    for (let i = 1; i < profiles.length; i += 1) {
-      const [roomier, denser] = [profiles[i - 1], profiles[i]];
-      if (!roomier || !denser) throw new Error('missing profile');
-      expect(denser.itemFont).toBeLessThan(roomier.itemFont);
-      expect(parseFloat(denser.side)).toBeLessThan(parseFloat(roomier.side));
-      expect(parseFloat(denser.sectionBefore)).toBeLessThan(parseFloat(roomier.sectionBefore));
+  it('scales everything together: level 6 is the reference, each level is 2% bigger', () => {
+    expect(scaleFor(REFERENCE_LEVEL)).toBe(1);
+    expect(scaleFor(7)).toBeCloseTo(1.02);
+    expect(scaleFor(1)).toBeCloseTo(0.9);
+    expect(layoutFor(REFERENCE_LEVEL).baseFont).toBe('10}{12');
+    expect(layoutFor(REFERENCE_LEVEL).itemFont).toBe('9.8}{12');
+  });
+
+  it('a higher level is bigger in every measurement', () => {
+    const keys = ['baseFont', 'itemFont', 'nameFont', 'side', 'top', 'sectionAfter'] as const;
+    for (let level = 2; level <= LAYOUT_LEVELS; level += 1) {
+      const small = layoutFor(level - 1);
+      const big = layoutFor(level);
+      for (const key of keys) {
+        expect(parseFloat(big[key])).toBeGreaterThan(parseFloat(small[key]));
+      }
     }
   });
 
-  it('writes the fill marker and the layout name', () => {
-    const tex = texFor(FICTIONAL_RESUME, { layout: 'dense' });
+  it('keeps text readable and margins sane at both ends of the scale', () => {
+    expect(parseFloat(layoutFor(1).itemFont)).toBeGreaterThanOrEqual(8.5);
+    expect(parseFloat(layoutFor(LAYOUT_LEVELS).itemFont)).toBeLessThanOrEqual(12.5);
+    expect(parseFloat(layoutFor(1).side)).toBeGreaterThanOrEqual(0.4);
+  });
+
+  it('writes the fill marker and the level', () => {
+    const tex = texFor(FICTIONAL_RESUME, { layout: 9 });
 
     expect(tex).toContain('\\typeout{TAILEX-FILL \\the\\pagetotal\\space\\the\\pagegoal}');
-    expect(tex.split('\n')[0]).toBe('% tailex-layout: dense');
+    expect(tex.split('\n')[0]).toBe('% tailex-layout: 9');
   });
 });
 

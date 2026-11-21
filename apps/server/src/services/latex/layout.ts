@@ -1,10 +1,7 @@
-import { LayoutSchema, type Layout, type ResumeData } from '@tailex/shared';
+import { LAYOUT_LEVELS, type Layout, type ResumeData } from '@tailex/shared';
 import type { CompileResult, CompileTex } from './compile.ts';
 import { parsePageFill } from './log-parser.ts';
 import { FILL_MARKER, renderResumeTex } from './template.ts';
-
-/** The order the auto-fit loop tries: the reference design first, denser ones only if needed. */
-export const LAYOUT_ORDER: readonly Layout[] = LayoutSchema.options;
 
 export type CompileFailure = Extract<CompileResult, { ok: false }>;
 
@@ -12,6 +9,7 @@ export interface FittedPdf {
   ok: true;
   pdf: Buffer;
   pageCount: number;
+  /** The size level that was chosen, 1 (smallest) to LAYOUT_LEVELS. */
   layout: Layout;
   /** 0–1, or null when it could not be measured. */
   fill: number | null;
@@ -19,27 +17,41 @@ export interface FittedPdf {
 }
 
 /**
- * Picks the layout by trying it (docs/DECISIONS.md ADR-036): the standard design if it fits on
- * one page, otherwise `compact`, then `dense`. A short resume is never stretched or enlarged:
- * same rhythm always, and the UI suggests adding content when the page is mostly empty.
- * Measuring real pdflatex output beats guessing from character counts, because TeX breaks
- * lines and pages in whole lines. Costs 1 compile normally, at most 3.
+ * Chooses the size of the design by trying it (docs/DECISIONS.md ADR-036): the LARGEST level
+ * that still fits on one page, so a short resume is enlarged and a long one is shrunk, with
+ * font, spacing and margins always scaled together (same look and rhythm at every size).
+ * If even the smallest level needs a second page, that PDF is returned and the UI asks the
+ * user to shorten. A bigger size never fits when a smaller one doesn't, so a binary search
+ * finds the answer in at most 4 compiles instead of 14.
  */
 export async function autoFitRender(
   resume: ResumeData,
   compileTex: CompileTex,
 ): Promise<FittedPdf | CompileFailure> {
-  let last: FittedPdf | null = null;
-  for (const layout of LAYOUT_ORDER) {
-    const attempt = await compileLayout(resume, layout, compileTex);
-    if (!attempt.ok || attempt.pageCount <= 1) return attempt;
-    last = attempt;
+  let best: FittedPdf | null = null; // the largest level that fit so far
+  let smallest: FittedPdf | null = null; // the smallest level tried, in case nothing fits
+  let low = 1;
+  let high = LAYOUT_LEVELS;
+
+  while (low <= high) {
+    const level = Math.floor((low + high) / 2);
+    const attempt = await compileLevel(resume, level, compileTex);
+    if (!attempt.ok) return attempt;
+    if (attempt.pageCount <= 1) {
+      best = attempt;
+      low = level + 1;
+    } else {
+      if (smallest === null || level < smallest.layout) smallest = attempt;
+      high = level - 1;
+    }
   }
-  if (last === null) throw new Error('LAYOUT_ORDER is empty');
-  return last; // even `dense` needs more than one page: the UI asks the user to shorten
+
+  const chosen = best ?? smallest;
+  if (chosen === null) throw new Error('No size level was tried');
+  return chosen;
 }
 
-async function compileLayout(
+async function compileLevel(
   resume: ResumeData,
   layout: Layout,
   compileTex: CompileTex,

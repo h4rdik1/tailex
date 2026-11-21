@@ -52,7 +52,7 @@ export interface RenderedPdf {
   pageCount: number;
   /** Characters the PDF fonts could not print (e.g. emoji), already removed. */
   droppedChars: string[];
-  /** The density profile the server picked, or null if the header was missing/unknown. */
+  /** The size level the server picked (1 = smallest), or null if the header was missing/invalid. */
   layout: Layout | null;
   /** How full the page is, 0–1, or null if the server could not measure it. */
   fill: number | null;
@@ -145,7 +145,7 @@ function parseOrThrow<T>(
 }
 
 function readLayout(header: string | null): Layout | null {
-  const parsed = LayoutSchema.safeParse(header);
+  const parsed = LayoutSchema.safeParse(header === null ? NaN : Number(header));
   return parsed.success ? parsed.data : null;
 }
 
