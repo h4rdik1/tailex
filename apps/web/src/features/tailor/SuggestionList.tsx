@@ -65,6 +65,14 @@ export function SuggestionList({
         {views.length} suggestion{views.length === 1 ? '' : 's'}: {ready} ready to accept
         {blocked > 0 ? `, ${String(blocked)} blocked` : ''}.
       </p>
+      {blocked > 0 && (
+        <Hint>
+          The truth check is strict on purpose. It can block a rewrite that is actually true, for
+          example when a number is spelled out ("two hundred" vs "200"). If so, edit the bullet
+          yourself on the Review step. It never lets an invented skill, number or name through, and
+          it cannot judge meaning, so read every rewrite before you accept it.
+        </Hint>
+      )}
       {meta !== null && meta.bulletsConsidered < meta.bulletsTotal && (
         <Hint>
           Only the first {meta.bulletsConsidered} of your {meta.bulletsTotal} bullets were checked.

@@ -222,7 +222,7 @@ describe('R3: no new name (employer, product, client, school, acronym)', () => {
   });
 
   it('allows a capitalised first word of a sentence, such as a new verb', () => {
-    expectOk('Wrote the docs.', 'Spearheaded the docs. Led reviews.');
+    expectOk('Wrote the docs.', 'Drafted the docs. Reviewed pages.');
     expectOk('Wrote the docs.', 'Authored the docs.');
   });
 
@@ -243,6 +243,22 @@ describe('R4: no new link, email or phone', () => {
 
   it("allows the user's own link when it is already in the bullet", () => {
     expectOk('Docs at github.com/mara-example.', 'Published the docs at github.com/mara-example.');
+  });
+});
+
+describe('R7: does not raise the role (assisted -> led)', () => {
+  it.each([
+    ['Assisted the team that built the API.', 'Led the team that built the API.', 'assisted → led'],
+    ['Helped ship the release.', 'Built the release.', 'helped → built'],
+    ['Built the report.', 'Managed the report.', 'built → managed'],
+  ])('blocks %j -> %j', (original, suggested, change) => {
+    expectBlocked(original, suggested, new RegExp(`role.*${change}`, 'i'));
+  });
+
+  it('allows the same level, a lower level, and verbs it does not know', () => {
+    expectOk('Built the report.', 'Developed the report.');
+    expectOk('Led the migration.', 'Helped with the migration.');
+    expectOk('Analysed the logs.', 'Led the logs.'); // original verb unknown: not judged
   });
 });
 

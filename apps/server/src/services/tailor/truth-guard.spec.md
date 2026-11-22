@@ -34,14 +34,15 @@ lowercase, curly quotes and dashes as plain ones, hyphens as spaces, repeated sp
 reuse `normalizeText` and `scanSkills` from `services/keywords/` (they already do this and know every
 alias, so "Postgres" = "PostgreSQL" and "RESTful" = "REST APIs").
 
-| #   | Rule                      | Block when                                                                                                     | Reason (shown to the user)                                |
-| --- | ------------------------- | -------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------- |
-| R1  | **No new skill or tool**  | `scanSkills(suggested)` finds a skill that `scanSkills(original)` does not, and it is not in `confirmedSkills` | `Adds a skill that is not in this bullet: <Skill>.`       |
-| R2  | **No new number**         | a number or percentage in `suggested` has no equal value in `original` (see "Numbers")                         | `Adds a number that is not in this bullet: <number>.`     |
-| R3  | **No new name**           | a proper noun or acronym in `suggested` is not in `original` (see "Names")                                     | `Adds a name that is not in this bullet: <name>.`         |
-| R4  | **No new contact detail** | a URL, email or phone number appears in `suggested` that is not in `original`                                  | `Adds a link, email or phone that is not in this bullet.` |
-| R5  | **Not much longer**       | `suggested` is more than 1.5 times as long as `original` (plus 20 characters of slack for very short bullets)  | `Much longer than the original bullet.`                   |
-| R6  | **Not empty**             | `suggested` is empty or only spaces                                                                            | `The rewrite is empty.`                                   |
+| #   | Rule                        | Block when                                                                                                     | Reason (shown to the user)                                |
+| --- | --------------------------- | -------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------- |
+| R1  | **No new skill or tool**    | `scanSkills(suggested)` finds a skill that `scanSkills(original)` does not, and it is not in `confirmedSkills` | `Adds a skill that is not in this bullet: <Skill>.`       |
+| R2  | **No new number**           | a number or percentage in `suggested` has no equal value in `original` (see "Numbers")                         | `Adds a number that is not in this bullet: <number>.`     |
+| R3  | **No new name**             | a proper noun or acronym in `suggested` is not in `original` (see "Names")                                     | `Adds a name that is not in this bullet: <name>.`         |
+| R4  | **No new contact detail**   | a URL, email or phone number appears in `suggested` that is not in `original`                                  | `Adds a link, email or phone that is not in this bullet.` |
+| R5  | **Not much longer**         | `suggested` is more than 1.5 times as long as `original` (plus 20 characters of slack for very short bullets)  | `Much longer than the original bullet.`                   |
+| R7  | **Does not raise the role** | the opening verb moves to a higher tier (helped < built < led), both verbs on the list (ADR-040)               | `Raises your role: assisted → led.`                       |
+| R6  | **Not empty**               | `suggested` is empty or only spaces                                                                            | `The rewrite is empty.`                                   |
 
 If no rule blocks, return `{ ok: true }`. Rephrasing, reordering, new verbs, and removing words are all fine.
 Check **all** the rules, but return the first reason in the table's order, so the message is predictable.

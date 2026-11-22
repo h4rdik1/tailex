@@ -68,6 +68,18 @@ describe('SuggestionList', () => {
     expect(screen.queryByRole('button', { name: /Accept rewrite/ })).not.toBeInTheDocument();
   });
 
+  it('explains that the check is strict and can block a true rewrite when something is blocked', () => {
+    renderList([view(suggestion('b1', { status: 'blocked' }))]);
+
+    expect(screen.getByText(/strict on purpose/i)).toBeInTheDocument();
+  });
+
+  it('does not show that note when nothing is blocked', () => {
+    renderList([view(suggestion('o1'))]);
+
+    expect(screen.queryByText(/strict on purpose/i)).not.toBeInTheDocument();
+  });
+
   it('a blocked rewrite without a reason still says why in plain words', () => {
     renderList([view(suggestion('b1', { status: 'blocked' }))]);
 

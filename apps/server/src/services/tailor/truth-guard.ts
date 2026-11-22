@@ -212,6 +212,38 @@ function firstNewName(before: Facts, after: Facts): string | null {
 const hasNewContact = (before: Facts, after: Facts): boolean =>
   [...after.contacts].some((contact) => !before.contacts.has(contact));
 
+// ---------- role strength (R7) ----------
+
+/**
+ * How much ownership a bullet's opening verb claims: 1 = helped, 2 = did, 3 = led. Rewriting
+ * "Assisted the team" as "Led the team" adds no new fact but inflates the role, so a rewrite may not
+ * move to a higher tier. Verbs not on this list are not judged (the user still reads every diff).
+ */
+const ROLE_TIERS = new Map<string, number>([
+  ...['assisted', 'helped', 'supported', 'contributed', 'participated', 'collaborated'].map(
+    (verb) => [verb, 1] as const,
+  ),
+  ...['built', 'developed', 'implemented', 'designed', 'created', 'wrote', 'delivered'].map(
+    (verb) => [verb, 2] as const,
+  ),
+  ...['led', 'managed', 'owned', 'spearheaded', 'architected', 'directed', 'headed'].map(
+    (verb) => [verb, 3] as const,
+  ),
+]);
+
+const openingVerb = (text: string): string =>
+  /^\s*\p{L}+/u.exec(text)?.[0].trim().toLowerCase() ?? '';
+
+function raisedRole(original: string, suggested: string): string | null {
+  const from = openingVerb(original);
+  const to = openingVerb(suggested);
+  const fromTier = ROLE_TIERS.get(from);
+  const toTier = ROLE_TIERS.get(to);
+  return fromTier !== undefined && toTier !== undefined && toTier > fromTier
+    ? `Raises your role: ${from} → ${to}.`
+    : null;
+}
+
 function check({ original, suggested, confirmedSkills }: TruthGuardInput): TruthGuardResult {
   if (suggested.trim() === '') return blocked('The rewrite is empty.');
 
@@ -230,6 +262,9 @@ function check({ original, suggested, confirmedSkills }: TruthGuardInput): Truth
 
   if (hasNewContact(before, after))
     return blocked('Adds a link, email or phone that is not in this bullet.');
+
+  const raised = raisedRole(original, suggested);
+  if (raised) return blocked(raised);
 
   if (suggested.length > original.length * MAX_LENGTH_FACTOR + LENGTH_SLACK) {
     return blocked('Much longer than the original bullet.');
