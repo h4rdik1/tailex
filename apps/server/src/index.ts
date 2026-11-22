@@ -1,6 +1,7 @@
 import { existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { createApp } from './app.ts';
+import { parseKeepAliveUrl, startKeepAlive } from './services/keep-alive.ts';
 
 const DEFAULT_PORT = 8080;
 
@@ -19,3 +20,8 @@ const port = readPort(process.env.PORT);
 app.listen(port, () => {
   console.log(`Tailex server listening on http://localhost:${String(port)}`);
 });
+
+const keepAliveUrl = process.env.KEEP_ALIVE_URL;
+if (keepAliveUrl) {
+  startKeepAlive(parseKeepAliveUrl(keepAliveUrl));
+}
