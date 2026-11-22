@@ -9,6 +9,7 @@ export const ERROR_MESSAGES: Record<ErrorCode | ClientErrorCode, string> = {
   NOT_FOUND: 'That feature is not available.',
   INTERNAL: 'Something went wrong on our side. Please try again.',
   BUSY: 'The PDF builder is busy. Please try again in a few seconds.',
+  RATE_LIMITED: 'Too many requests from your connection. Please wait a minute and try again.',
   COMPILE_FAILED: 'The PDF could not be built. See the details below.',
   COMPILE_TIMEOUT: 'Building the PDF took too long. Try shortening some text.',
   KEY_MISSING: 'Add your API key first (top of the page), or try the sample resume.',

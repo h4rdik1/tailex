@@ -297,6 +297,21 @@ Short ADRs. Format: **Context · Options · Choice · Tradeoffs.** New decisions
 - **Not done:** years of experience. Resume dates come in too many formats to compute reliably, and a wrong number would mislead the AI.
 - **Verified with a real Gemini call** (fictional resume and job description): the AI returned one rewrite that reused the job's wording ("Improved API performance and reduced response times...") and kept every number and skill; the guard passed it. With a job description that matched the bullets already, the AI returned nothing and the UI said so.
 
+## ADR-042 — Phase 6: security headers, CSP and rate limits
+
+- **Context:** the app is about to be public. Anyone could burn the PDF builder's CPU or hammer the API, and an injected script could read a key from memory.
+- **Decision:** `helmet` sets the headers; the CSP is exactly the one in SECURITY.md (everything from our own origin; `blob:` only for the PDF preview frame; no inline script or style; `frame-ancestors 'none'`), with `useDefaults: false` so nothing is hidden. `upgrade-insecure-requests` is added only in production (it would break plain `http://localhost`). Permissions-Policy turns off every browser feature we do not use. `express-rate-limit` gives per-visitor limits: general 120/min and tighter on the expensive routes (parse 10, tailor 10, render 20, key test 10); health is exempt (the platform polls it). Counting is in memory, per instance, and forgotten on restart: it is abuse protection, not accounting. `trust proxy` is 1 hop (Cloud Run's front end adds the real client address once). A 429 uses our error shape with the new code `RATE_LIMITED`.
+- **Why libraries:** `helmet` 8.3.0 and `express-rate-limit` 8.7.5, both pinned, widely used and maintained; a hand-written limiter or header list is more code to explain and more places to be wrong.
+- **Checked:** unit tests for every header and limit, and the built app in a real browser: the PDF preview, the score meter and the whole sample flow run under the policy with no console errors (the Playwright test fails on any console error).
+- **Known limits:** limits are per instance (two instances = twice the allowance); an attacker with many addresses is not stopped by this, only by Cloud Run's max-instances cap and the budget alert.
+
+## ADR-043 — Phase 6: production image, Cloud Run settings and the e2e test
+
+- **Image:** two stages. The build stage has the dev tools and builds the web app; the runtime stage has Node 24, the same four TeX Live packages as the dev image, only production dependencies (`npm ci --omit=dev -w @tailex/server -w @tailex/shared`), the server sources (Node runs TypeScript natively, ADR-016) and the built web app. It runs as the non-root `node` user, has a health check, and works with `--read-only --cap-drop ALL --no-new-privileges` (only `/tmp` is written, and the compile service deletes its folder). Checked locally: healthy, uid 1000, `NODE_ENV=production`, a real 185 KB PDF built inside the hardened container. Size is about 800 MB, almost all TeX Live.
+- **Cloud Run:** max instances 2, min 0 (scale to zero), concurrency 4, 1 CPU, 1 GiB, 60 s timeout. See DEPLOY.md.
+- **e2e:** one Playwright test of the sample flow against the production image, failing on any console error (that is how a CSP violation appears). CI starts the image and runs it. Locally it ran in the official Playwright image attached to the app container's network (`--network container:`), so the address is `localhost`: the production CSP's `upgrade-insecure-requests` makes a plain-http page on any other host name load blank, which is correct on https and is why the test must use localhost.
+- **Lockfile lesson:** `npm install` on Windows rewrote `package-lock.json` without Linux-only optional packages, and the Linux `npm ci` then refused it. Dependencies are now added from the Linux container (`docker compose ... run dev npm install ...`), so the lock stays valid for CI and Docker.
+
 ## Pending
 
 - **Analytics:** Cloudflare Web Analytics vs Umami vs GoatCounter. Owner decides in Phase 6. Counts only: `resume_uploaded`, `pdf_generated`, `sample_used`.

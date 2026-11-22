@@ -38,7 +38,7 @@ Please **do not open a public issue** for security problems. Use GitHub's **priv
 | T12 | **Secrets in repo**                                                                | `.env.example` only; `.env` gitignored; no owner key used anywhere                                                                                                                                                                                                              | review + gitignore                                                                                                                 |
 | T13 | **Real personal data in repo**                                                     | Samples and fixtures use **fictional people only**                                                                                                                                                                                                                              | fixture review                                                                                                                     |
 
-## Content-Security-Policy (target, Phase 6)
+## Content-Security-Policy (implemented in Phase 6, `middleware/security.ts`)
 
 ```
 default-src 'self';
@@ -60,10 +60,14 @@ upgrade-insecure-requests
 - Analytics (once chosen) adds exactly its one origin to `script-src`/`connect-src`.
 - Other headers via helmet: HSTS, `X-Content-Type-Options: nosniff`, `Referrer-Policy: no-referrer`, `Cross-Origin-Opener-Policy: same-origin`, `Permissions-Policy` with everything disabled.
 
+## Rate limits (implemented, `middleware/rate-limit.ts`)
+
+Per visitor (the address Cloud Run reports), per minute, counted in memory on each instance: all `/api` 120 (health exempt), `/parse` 10, `/tailor` 10, `/render` 20, `/key/test` 10. Over the limit the answer is 429 with `RATE_LIMITED` and a `Retry-After` header. The key is never logged, even on a rejected request (tested).
+
 ## Container hardening (Phases 2 and 6)
 
 - **Phase 2 (dev image, done):** Debian slim + 4 TeX Live packages only (ADR-020), runs as the non-root `node` user, compile work happens in `os.tmpdir()` with a fresh folder per request. Sandbox flags are verified by tests against a control run (ADR-024).
-- **Phase 6 (production):** multi-stage build, non-root user, read-only root FS that keeps `/tmp` writable (required by the compile service), healthcheck, CPU/memory limits.
+- **Phase 6 (production, done):** multi-stage `Dockerfile`, non-root `node` user, works with a read-only root FS and `/tmp` writable (the compile service), all capabilities dropped, healthcheck, CPU/memory limits in DEPLOY.md. CI builds it and runs the e2e test against it.
 
 ## Logging
 

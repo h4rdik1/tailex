@@ -38,3 +38,30 @@ jobs:
       # to the runner user. Let it write the coverage report into the mounted folder.
       - run: chmod -R a+rwX .
       - run: npm run test:docker
+
+  # Builds the production image, starts it the way Cloud Run will (non-root, read-only filesystem,
+  # no extra privileges) and runs the one end-to-end test in a real browser (sample mode, no key).
+  image:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - run: docker build -t tailex .
+      - run: docker run -d --name tailex -p 8081:8080 --read-only --tmpfs /tmp --cap-drop ALL --security-opt no-new-privileges tailex
+      - name: Wait for the health check
+        run: |
+          for i in $(seq 1 30); do
+            curl -sf http://localhost:8081/api/health && exit 0
+            sleep 2
+          done
+          docker logs tailex
+          exit 1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npx playwright test -c e2e/playwright.config.ts
+        env:
+          E2E_BASE_URL: http://localhost:8081

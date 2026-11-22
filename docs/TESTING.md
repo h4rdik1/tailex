@@ -53,3 +53,8 @@ npm run test:coverage
 npm run test:docker    # full suite + coverage gates in the Linux image with pdflatex (also run by CI)
 npm run e2e            # Phase 6
 ```
+
+## Phase 6 additions
+
+- `apps/server/test/security.test.ts`: every header and the exact CSP, production-only `upgrade-insecure-requests`, 429 shape and `Retry-After`, per-route and per-visitor limits, health exempt, default limits, key never logged on a rejected request.
+- `e2e/sample-flow.spec.ts` (Playwright, 1 test): sample resume, real PDF preview, tailor, accept a rewrite, rebuild, download, and **no browser console errors** (a CSP violation shows up as one). CI runs it in the `image` job against the production image; locally see ADR-043 for the Docker way.

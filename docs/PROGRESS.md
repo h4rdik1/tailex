@@ -69,12 +69,13 @@ Built on branch `phase-3` while the owner was away (not merged to `main`).
 
 ## Phase 6 — Hardening + deploy
 
-- [ ] helmet, CSP, rate limits, trust proxy
-- [ ] Playwright e2e (sample mode)
-- [ ] Production multi-stage Dockerfile, non-root, healthcheck
-- [ ] Cloud Run config (max instances 1–2, low concurrency)
-- [ ] Analytics (owner chooses)
-- [ ] Final README
+- [x] helmet, strict CSP, rate limits, trust proxy (ADR-042)
+- [x] Playwright e2e (sample mode) in CI (ADR-043)
+- [x] Production multi-stage Dockerfile, non-root, healthcheck, CI build (ADR-043)
+- [x] Cloud Run settings and guided deploy steps (docs/DEPLOY.md)
+- [ ] **Owner:** run the deploy (needs the owner's Google Cloud account and billing), then smoke-test the live URL
+- [ ] Analytics: owner chooses (recommendation: none until after launch; each one adds a CSP origin)
+- [x] Final README
 
 ## Later (out of v1/v1.1 scope)
 
