@@ -35,7 +35,7 @@ export interface AppOptions {
   registry?: ProviderRegistry;
   /** PDF/DOCX → text. Default: unpdf + mammoth. */
   extractText?: TextExtractor;
-  /** Decides whether an AI rewrite is true. Default: the owner-written guard (fails closed until finished). */
+  /** Decides whether an AI rewrite is true. Default: the real guard (fails closed if it throws). */
   truthGuard?: TruthGuard;
   logger?: Logger;
 }

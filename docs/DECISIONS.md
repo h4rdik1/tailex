@@ -280,6 +280,14 @@ Short ADRs. Format: **Context · Options · Choice · Tradeoffs.** New decisions
 - **Sample mode:** the JD and four canned rewrites (two pass, two blocked) live in `packages/shared`. The Tailor step in sample mode calls no AI and sends no key. A server test checks the canned bullets are the sample resume's exact bullets, and, once the guard is written, that each canned verdict equals the real guard's.
 - **Not in Phase 5:** Playwright e2e, rate limits and CSP (Phase 6), keyboard shortcuts and undo for diffs (SPEC "Later"), tailoring the new summary, and free-text skills.
 
+## ADR-040 — The truth guard, written by Claude at the owner's request
+
+- **Context:** CLAUDE.md rule 6 says the owner hand-writes `truthGuard`. After the spec, tests and a fail-closed stub were ready, the owner asked Claude to write it ("write it for me right now, I will understand it once done"). The rule is waived for this function by the owner; the owner must still be able to explain it (LEARNING.md has the walkthrough).
+- **Decisions (spec D1-D5, recommended options):** facts must come from the **same bullet**, not the whole resume (`resumeText` is accepted but unused); a confirmed skill is allowed; spelled-out numbers count, except "one" (ordinary English: "one of", "no one"); new capitalised words and acronyms are blocked; length cap 1.5x + 20 characters.
+- **Design:** contacts are cut out first so their digits and words are not read as numbers or names; skills come from `scanSkills`; numbers are compared by value (`1.5k` = `1500`, `$5M` = `5 million`, percent kept apart); a name is an acronym/mixed-case term or a capitalised word not at a sentence start, skipping words inside a recognised skill. Rules run in the spec's order and the first reason wins. The scan uses fixed regexes with no nested quantifiers. Any exception is caught and returns "blocked" (fail closed).
+- **Known limits:** it checks added facts, not meaning (it cannot tell "led" from "assisted"); "two hundred" is two numbers, so an original "200" blocks it (a false block, never a false pass); a skill the list does not know is only caught if it looks like a name.
+- **Tests:** the 51 spec tests pass unchanged; the stub-era test in `tailor.test.ts` was updated because the real guard now gives real reasons (a rewrite adding TypeScript is blocked with that reason, a pure rephrasing passes).
+
 ## Pending
 
 - **Analytics:** Cloudflare Web Analytics vs Umami vs GoatCounter. Owner decides in Phase 6. Counts only: `resume_uploaded`, `pdf_generated`, `sample_used`.

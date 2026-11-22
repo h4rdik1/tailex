@@ -98,14 +98,28 @@ describe('POST /api/tailor: the happy path', () => {
 });
 
 describe('POST /api/tailor: the truth guard decides, and fails closed', () => {
-  it('with the real guard (not finished yet) every suggestion is BLOCKED with a reason, never accepted or hidden', async () => {
+  it('with the real guard a rewrite that adds a skill is BLOCKED with the reason, never accepted or hidden', async () => {
     const { app } = setup([answer(GOOD)]); // no guard passed: the real one
 
     const body = TailorResponseSchema.parse((await tailor(app)).body);
 
     expect(body.suggestions).toHaveLength(1);
     expect(body.suggestions[0]).toMatchObject({ status: 'blocked' });
-    expect(body.suggestions[0]?.blockedReason).toContain('truth check');
+    expect(body.suggestions[0]?.blockedReason).toMatch(/skill.*TypeScript/);
+  });
+
+  it('with the real guard a pure rephrasing is accepted', async () => {
+    const { app } = setup([
+      answer({
+        id: FIRST_BULLET.id,
+        suggested:
+          'Developed a React dashboard used by 40 internal support agents to track refund requests.',
+      }),
+    ]);
+
+    const body = TailorResponseSchema.parse((await tailor(app)).body);
+
+    expect(body.suggestions[0]).toMatchObject({ status: 'ok' });
   });
 
   it("shows the guard's reason for a blocked suggestion and keeps the others", async () => {

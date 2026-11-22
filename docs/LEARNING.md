@@ -571,11 +571,26 @@ is marked **outdated**, because applying it would silently undo your edit.
 - **How do you keep the UI from showing an old answer?** A request counter in a ref: only the newest
   request may set state.
 
-### Your turn: the truth guard
+### How the truth guard works (`truth-guard.ts`)
 
-Open `apps/server/src/services/tailor/truth-guard.spec.md`, then run
-`npx vitest run apps/server/test/truth-guard.test.ts`. 49 tests are red on purpose. When they are green,
-the sample-mode test that compares the canned verdicts with your guard switches on by itself.
+It compares the AI's rewrite with the original bullet and asks one question: **did it add a fact?**
+
+```
+suggested ──► cut out links/emails/phones ──► find skills, numbers, names ──► anything NEW?  ──► blocked + reason
+original  ──► (same steps)                                                       │ no
+                                                                                 ▼
+                                                                    length check (1.5x + 20) ──► ok
+```
+
+- **Skills:** reuse the keyword scanner. A skill in the rewrite that the bullet did not have is blocked, unless you confirmed it.
+- **Numbers:** compared by _value_: `1,000` = `1000`, `1.5k` = `1500`, `$5M` = `5 million`, `40%` = `40 percent`, `ten` = `10`. `40` is not `40%`. Digits glued to letters (`S3`, `p95`) are names, not numbers.
+- **Names:** an acronym or a capitalised word that is not the start of a sentence ("at Stripe") must already be in the bullet.
+- **Same bullet, not the whole resume:** "Docker" listed under Skills does not make it true of _this_ bullet.
+- **Never throws:** if anything fails the answer is "blocked" (fail closed).
+
+Interview Q&A: _Why compare numbers by value?_ So a harmless reformatting is not blocked and a changed value is.
+_Why not trust the prompt?_ A prompt is a request; this is a check. _Why accept false blocks?_ One click vs a lie on a resume.
+_Limits:_ it cannot judge meaning ("led" vs "assisted"), and "one" is not treated as a number.
 
 ---
 
