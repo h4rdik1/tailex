@@ -101,6 +101,23 @@ describe('renderResumeTex: sections', () => {
     expect(tex).toContain('{Projects}');
   });
 
+  it('prints a single uncategorised skills group as one plain list, without a repeated label', () => {
+    const resume = structuredClone(FICTIONAL_RESUME);
+    resume.skills = [
+      { id: 'skills0', category: 'Skills', items: ['Pattern cutting', 'Hand sewing', 'Fitting'] },
+    ];
+    const tex = texFor(resume);
+
+    expect(tex).toContain('Pattern cutting, Hand sewing, Fitting');
+    expect(tex).not.toContain('\\textbf{Skills}');
+  });
+
+  it('still labels real categories, even when several groups exist', () => {
+    const tex = texFor();
+
+    expect(tex).toContain('\\textbf{Languages}: ');
+  });
+
   it('skips the company line when company and location are both empty', () => {
     const resume = structuredClone(FICTIONAL_RESUME);
     const job = resume.experience[0];

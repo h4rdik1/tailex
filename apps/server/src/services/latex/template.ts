@@ -199,10 +199,16 @@ function renderSkills(groups: readonly SkillGroup[], safe: SafeText): string {
   ].join('\n');
 }
 
+/** When a resume has no skill categories the parser makes one group called "Skills". */
+const GENERIC_SKILL_LABELS = new Set(['skills', 'technical skills', 'key skills', 'core skills']);
+
 function renderSkillGroup(group: SkillGroup, safe: SafeText): string {
   const items = group.items.filter(isFilled).map(safe).join(', ');
   if (items === '') return '';
-  return isFilled(group.category) ? `\\textbf{${safe(group.category)}}: ${items}` : items;
+  // The section heading already says "Technical Skills", so a generic label would repeat it.
+  const hasRealCategory =
+    isFilled(group.category) && !GENERIC_SKILL_LABELS.has(group.category.trim().toLowerCase());
+  return hasRealCategory ? `\\textbf{${safe(group.category)}}: ${items}` : items;
 }
 
 function renderExperience(entry: Experience, safe: SafeText): string {
