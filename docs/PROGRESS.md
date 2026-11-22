@@ -61,11 +61,11 @@ Built on branch `phase-3` while the owner was away (not merged to `main`).
 
 ## Phase 5 — Tailoring (v1.1)
 
-- [ ] `skills.json` + keyword engine + JD fixtures
-- [ ] Missing-skill selection UI
-- [ ] `tailor-v1` prompt (show final text first)
-- [ ] **Owner:** truth guard (spec + tests first, then wait)
-- [ ] Diff UI with Accept/Reject + Blocked state → **v1.1**
+- [x] `skills.json` + keyword engine + JD fixtures (ADR-039)
+- [x] Missing-skill selection UI (only ticked skills are added, by our code)
+- [x] `tailor-v1` prompt wired (text unchanged from SPEC §11); `POST /api/tailor` with redaction, Zod retry and a fail-closed guard stub
+- [ ] **Owner:** truth guard. Spec (`truth-guard.spec.md`) and 51 tests are written, 49 fail on purpose until you write it. **Do not merge `phase-5` before.**
+- [x] Diff UI with Accept/Reject, Blocked and Outdated states, sample mode (merge when the guard is done → **v1.1**)
 
 ## Phase 6 — Hardening + deploy
 

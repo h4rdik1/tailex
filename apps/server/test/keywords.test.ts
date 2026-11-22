@@ -365,6 +365,20 @@ describe('suggestGroup: where a confirmed skill should go', () => {
     expect(suggestGroup('Backend', resume)).toEqual({ groupId: 'skills1', label: 'Frameworks' });
   });
 
+  it('files DevOps and testing tools under a "Tools" group when the resume has one', () => {
+    const resume = resumeWith({
+      skills: [
+        { id: 'skills0', category: 'Languages', items: [] },
+        { id: 'skills1', category: 'Tools', items: ['Git'] },
+      ],
+    });
+
+    expect(suggestGroup('Cloud & DevOps', resume)).toEqual({ groupId: 'skills1', label: 'Tools' });
+    expect(suggestGroup('Testing', resume)).toEqual({ groupId: 'skills1', label: 'Tools' });
+    // ...but a language still goes with the languages.
+    expect(suggestGroup('Languages', resume)).toEqual({ groupId: 'skills0', label: 'Languages' });
+  });
+
   it('uses the only group when the resume has one plain "Skills" group', () => {
     const resume = resumeWith({ skills: [{ id: 'skills0', category: 'Skills', items: [] }] });
 

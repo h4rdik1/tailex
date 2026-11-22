@@ -490,6 +490,95 @@ match character for character, and a test compares them. Changing one without th
 - **Why must the prompt in code match the spec?** The spec is the reviewed source of truth for
   what we send to a third party. A test makes a silent edit impossible.
 
+## Phase 5 — Tailor to a job (branch `phase-5`)
+
+### The flow in plain words
+
+```
+paste a job description ──► Analyze ──► matched / missing / extra skills + score     (code only, no AI, no key)
+                                  │
+              tick only the skills you really have ──► "Add to Skills"               (our code adds them)
+                                  │
+                     "Suggest bullet rewrites" ──► AI rewords bullets                (uses your key)
+                                  │
+                    truth guard checks EVERY rewrite (code) ──► ok / blocked + reason
+                                  │
+                      Accept / Reject each as a word diff ──► your resume changes only now
+```
+
+The AI is the least trusted part. It never sees your contact details, never sees the skills you ticked,
+and nothing it writes reaches the resume without passing a check written in code **and** a click from you.
+
+### How the keyword engine finds a skill
+
+It is a list (`skills.json`) and a careful search, not an AI. For each skill name we look for the text and
+then check what is **around** it:
+
+- `c` is found inside `c++`, so we look at the next character: a `+` means it is a different skill.
+- `java` is found inside `javascript`: the next character is a letter, so no.
+- `go` is a normal English word ("go to market"), so `Go` only counts with a capital G **and** when it looks
+  like a list ("Python, Go" or "Languages: Go").
+
+We use `indexOf`, not a regular expression built from the text. A regex can be made to take forever by
+nasty input (ReDoS); `indexOf` takes time proportional to the text, and a test proves a 15 000-character
+single word is fast.
+
+Is it required? We read the sentence ("must have", "a plus") and the heading above it ("Requirements",
+"Nice to have"). The score counts required skills double.
+
+### Fail closed
+
+The truth guard is yours to write. Until you do, the stub says "blocked" to everything. That is the
+safe default: if the check is missing, broken, or throws an error, the answer is **no**, never "probably
+fine". It is the same idea as a locked door that opens only for a key, instead of a door that locks only
+if someone remembers to.
+
+### The word diff (LCS) in one picture
+
+To show what changed between two sentences we find the longest list of words they share, in order. Words
+only in the old one are struck through, words only in the new one are highlighted:
+
+```
+Built a React dashboard...      shared words: "a React dashboard ..."
+Developed a React and TypeScript dashboard...     removed: Built      added: Developed, and TypeScript
+```
+
+It is a small table (rows = old words, columns = new words) filled from the bottom right. About 40 lines,
+so no library was needed.
+
+### Stale answers and double clicks
+
+If you click Analyze twice, or edit the page while a request is running, an old slow answer could arrive
+last and overwrite a newer one. `useTailor` numbers every request; only the newest number may update the
+screen. Clicking while busy does nothing. A suggestion for a bullet you edited after the rewrite arrived
+is marked **outdated**, because applying it would silently undo your edit.
+
+### Interview Q&A (Phase 5)
+
+- **Why not ask the AI to extract the skills?** It is slower, costs money, can invent, and gives a
+  different answer each time. A list plus careful matching is free, instant, testable and repeatable.
+- **How do you stop the AI adding a skill you don't have?** Three layers: the prompt says no, the code
+  (truth guard) blocks it, and you must click Accept. Only the code and the click are security.
+- **What is a ReDoS and how did you avoid it?** A regular expression that takes exponential time on
+  crafted input. We never build a regex from user text; we use `indexOf` with boundary checks.
+- **Why are confirmed skills added by your code and not sent to the AI?** If the AI knew you "have"
+  Kubernetes it could write "deployed with Kubernetes" in a bullet about something else. Adding the skill
+  to the Skills list says only "I know it", which is what you confirmed.
+- **Why is "fail closed" better here?** A false block costs the user one click. A false pass puts a lie on
+  a resume.
+- **How do you test the AI step without an AI?** `createMockProvider` returns scripted answers, including
+  bad ones (wrong shape, too long, extra keys), so every error path runs.
+- **How do you keep the UI from showing an old answer?** A request counter in a ref: only the newest
+  request may set state.
+
+### Your turn: the truth guard
+
+Open `apps/server/src/services/tailor/truth-guard.spec.md`, then run
+`npx vitest run apps/server/test/truth-guard.test.ts`. 49 tests are red on purpose. When they are green,
+the sample-mode test that compares the canned verdicts with your guard switches on by itself.
+
+---
+
 ---
 
 ## Commands cheat sheet

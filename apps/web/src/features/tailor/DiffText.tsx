@@ -13,7 +13,7 @@ export function DiffText({ parts }: { parts: readonly DiffPart[] }) {
           return (
             <del
               key={index}
-              className="rounded-sm bg-red-100 text-red-900 dark:bg-red-950 dark:text-red-300"
+              className="rounded-sm bg-red-100 px-0.5 text-red-900 dark:bg-red-950 dark:text-red-300"
             >
               {part.text}
             </del>
@@ -23,7 +23,7 @@ export function DiffText({ parts }: { parts: readonly DiffPart[] }) {
           return (
             <ins
               key={index}
-              className="rounded-sm bg-emerald-100 text-emerald-900 no-underline dark:bg-emerald-950 dark:text-emerald-200"
+              className="rounded-sm bg-emerald-100 px-0.5 text-emerald-900 no-underline dark:bg-emerald-950 dark:text-emerald-200"
             >
               {part.text}
             </ins>
