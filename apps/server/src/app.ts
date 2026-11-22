@@ -8,6 +8,8 @@ import { createRenderRouter } from './routes/render.ts';
 import { createTailorRouter } from './routes/tailor.ts';
 import { apiNotFound, createErrorHandler } from './middleware/error-handler.ts';
 import { createLogger, requestLogger, type Logger } from './middleware/logger.ts';
+import { mountRateLimits, type RateLimitSettings } from './middleware/rate-limit.ts';
+import { securityHeaders } from './middleware/security.ts';
 import { compileTex as realCompileTex, type CompileTex } from './services/latex/compile.ts';
 import { createSlotLimiter } from './services/latex/slot-limiter.ts';
 import {
@@ -38,7 +40,14 @@ export interface AppOptions {
   /** Decides whether an AI rewrite is true. Default: the real guard (fails closed if it throws). */
   truthGuard?: TruthGuard;
   logger?: Logger;
+  /** Per-visitor request limits. Tests lower them; the defaults suit normal use. */
+  rateLimits?: Partial<RateLimitSettings>;
+  /** Production adds `upgrade-insecure-requests`. Default: NODE_ENV is "production". */
+  production?: boolean;
 }
+
+/** Hops of trusted proxies: Cloud Run's front end adds the real client address once (docs/SECURITY.md T10). */
+const TRUSTED_PROXY_HOPS = 1;
 
 /**
  * Builds the Express app without starting it, so tests can call it with supertest
@@ -53,7 +62,12 @@ export function createApp(options: AppOptions = {}): Express {
   const registry = options.registry ?? defaultRegistry();
 
   app.disable('x-powered-by');
+  app.set('trust proxy', TRUSTED_PROXY_HOPS);
   app.use(requestLogger(logger));
+  app.use(
+    securityHeaders({ production: options.production ?? process.env.NODE_ENV === 'production' }),
+  );
+  mountRateLimits(app, options.rateLimits);
 
   // Upload route first: it reads the raw file body itself (not JSON).
   app.use(

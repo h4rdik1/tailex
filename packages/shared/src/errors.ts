@@ -6,6 +6,7 @@ export const ErrorCodeSchema = z.enum([
   'NOT_FOUND',
   'INTERNAL',
   'BUSY',
+  'RATE_LIMITED',
   'COMPILE_FAILED',
   'COMPILE_TIMEOUT',
   // Key and provider (Phase 3)
