@@ -20,10 +20,10 @@ export interface RedactionResult {
   contact: Contact;
 }
 
-const EMAIL = /[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)*\.[A-Za-z]{2,}/g;
+export const EMAIL = /[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)*\.[A-Za-z]{2,}/g;
 
 /** http(s) URLs, www. addresses and bare profile links like linkedin.com/in/x or github.com/x. */
-const URL_LIKE =
+export const URL_LIKE =
   /\b(?:https?:\/\/[^\s<>()"']+|www\.[^\s<>()"']+|(?:linkedin\.com|github\.com|gitlab\.com|x\.com|twitter\.com|leetcode\.com)\/[^\s<>()"']+)/gi;
 
 /**
@@ -32,17 +32,17 @@ const URL_LIKE =
  * Deliberately case-SENSITIVE and limited to common personal-site endings, so tech names like
  * "Node.js", "ASP.NET", "B.Tech" or "Vue.js" are not mistaken for links.
  */
-const BARE_DOMAIN =
+export const BARE_DOMAIN =
   /\b[a-z0-9][a-z0-9-]*(?:\.[a-z0-9-]+)*\.(?:com|org|net|io|dev|in|co|me|ai|app|xyz|page|site|info|blog|codes)\b(?:\/[^\s<>()"']*)?/g;
 
 /** @handles (emails are already gone by the time this runs, so "a@b.com" can't match). */
-const HANDLE = /(^|[\s(|,])@([A-Za-z0-9_]{2,30})\b/g;
+export const HANDLE = /(^|[\s(|,])@([A-Za-z0-9_]{2,30})\b/g;
 
 /**
  * Phone-shaped runs: optional +country code, then 2–5 groups of digits separated by space, dot,
  * dash or brackets. Candidates are then filtered by digit count (10–15) and "not a list of years".
  */
-const PHONE_CANDIDATE = /(?:\+\d{1,3}[\s.-]?)?(?:\(?\d{2,5}\)?[\s.-]?){1,4}\d{2,5}/g;
+export const PHONE_CANDIDATE = /(?:\+\d{1,3}[\s.-]?)?(?:\(?\d{2,5}\)?[\s.-]?){1,4}\d{2,5}/g;
 
 const NON_NAME_FIRST_LINES = new Set(['resume', 'curriculum vitae', 'cv', 'résumé', 'profile']);
 
@@ -185,7 +185,7 @@ function looksLikePlace(piece: string): boolean {
   return PLACE_SHAPE.test(piece);
 }
 
-function looksLikePhone(candidate: string): boolean {
+export function looksLikePhone(candidate: string): boolean {
   const digits = candidate.replace(/\D/g, '');
   if (digits.length < 10 || digits.length > 15) return false;
   // "2019 2020 2021" or "2019-2023" are years, not phone numbers.
@@ -284,7 +284,7 @@ function toLinks(visibleUrls: readonly string[], hiddenUrls: readonly string[]):
     }));
 }
 
-const TRAILING_PUNCTUATION = /[.,;:!?]+$/;
+export const TRAILING_PUNCTUATION = /[.,;:!?]+$/;
 
 function trimTrailingPunctuation(url: string): string {
   return url.replace(TRAILING_PUNCTUATION, '');
@@ -294,11 +294,15 @@ function trailingPunctuation(url: string): string {
   return TRAILING_PUNCTUATION.exec(url)?.[0] ?? '';
 }
 
-/** Any run of whitespace in the search matches any whitespace, so a name split over two lines is found. */
-function replaceAllCaseInsensitive(text: string, search: string, replacement: string): string {
-  const escaped = search
+/** Matches a name in any case; any run of whitespace in it matches any whitespace, so a name split over two lines is found. */
+export function nameRegex(name: string): RegExp {
+  const escaped = name
     .split(/\s+/)
     .map((word) => word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
     .join('\\s+');
-  return text.replace(new RegExp(escaped, 'gi'), replacement);
+  return new RegExp(escaped, 'gi');
+}
+
+function replaceAllCaseInsensitive(text: string, search: string, replacement: string): string {
+  return text.replace(nameRegex(search), replacement);
 }

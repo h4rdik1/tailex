@@ -5,6 +5,7 @@ import { createKeyTestRouter } from './routes/key-test.ts';
 import { createKeywordsRouter } from './routes/keywords.ts';
 import { createParseRouter } from './routes/parse.ts';
 import { createRenderRouter } from './routes/render.ts';
+import { createTailorRouter } from './routes/tailor.ts';
 import { apiNotFound, createErrorHandler } from './middleware/error-handler.ts';
 import { createLogger, requestLogger, type Logger } from './middleware/logger.ts';
 import { compileTex as realCompileTex, type CompileTex } from './services/latex/compile.ts';
@@ -16,6 +17,7 @@ import {
 import { createGeminiProvider } from './services/llm/gemini.ts';
 import { createMockProvider } from './services/llm/mock.ts';
 import { createProviderRegistry, type ProviderRegistry } from './services/llm/registry.ts';
+import { truthGuard as realTruthGuard, type TruthGuard } from './services/tailor/truth-guard.ts';
 
 /** How many pdflatex processes may run at once (docs/SECURITY.md T9). */
 const DEFAULT_MAX_CONCURRENT_COMPILES = 2;
@@ -33,6 +35,8 @@ export interface AppOptions {
   registry?: ProviderRegistry;
   /** PDF/DOCX → text. Default: unpdf + mammoth. */
   extractText?: TextExtractor;
+  /** Decides whether an AI rewrite is true. Default: the owner-written guard (fails closed until finished). */
+  truthGuard?: TruthGuard;
   logger?: Logger;
 }
 
@@ -65,6 +69,10 @@ export function createApp(options: AppOptions = {}): Express {
   app.use('/api', healthRouter);
   app.use('/api', createKeyTestRouter(registry, logger));
   app.use('/api', createKeywordsRouter()); // no key: deterministic code only
+  app.use(
+    '/api',
+    createTailorRouter({ registry, truthGuard: options.truthGuard ?? realTruthGuard, logger }),
+  );
   app.use(
     '/api',
     createRenderRouter({
