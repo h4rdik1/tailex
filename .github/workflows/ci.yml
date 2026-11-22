@@ -39,8 +39,8 @@ jobs:
       - run: chmod -R a+rwX .
       - run: npm run test:docker
 
-  # Builds the production image and starts it the way Cloud Run will (non-root, read-only
-  # filesystem, no extra privileges). Fails if it does not become healthy.
+  # Builds the production image, starts it the way Cloud Run will (non-root, read-only filesystem,
+  # no extra privileges) and runs the one end-to-end test in a real browser (sample mode, no key).
   image:
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -56,3 +56,12 @@ jobs:
           done
           docker logs tailex
           exit 1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npx playwright test -c e2e/playwright.config.ts
+        env:
+          E2E_BASE_URL: http://localhost:8081
