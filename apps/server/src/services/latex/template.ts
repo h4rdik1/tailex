@@ -202,13 +202,22 @@ function renderSkills(groups: readonly SkillGroup[], safe: SafeText): string {
 /** When a resume has no skill categories the parser makes one group called "Skills". */
 const GENERIC_SKILL_LABELS = new Set(['skills', 'technical skills', 'key skills', 'core skills']);
 
+/** A skill that is a sentence ("Knowledge of luxury fabrics, including wool, silk") not a keyword. */
+function isPhrase(skill: string): boolean {
+  return skill.includes(',') || skill.trim().split(/\s+/).length > 5;
+}
+
 function renderSkillGroup(group: SkillGroup, safe: SafeText): string {
-  const items = group.items.filter(isFilled).map(safe).join(', ');
-  if (items === '') return '';
+  const skills = group.items.filter(isFilled);
+  if (skills.length === 0) return '';
   // The section heading already says "Technical Skills", so a generic label would repeat it.
   const hasRealCategory =
     isFilled(group.category) && !GENERIC_SKILL_LABELS.has(group.category.trim().toLowerCase());
-  return hasRealCategory ? `\\textbf{${safe(group.category)}}: ${items}` : items;
+  if (hasRealCategory) return `\\textbf{${safe(group.category)}}: ${skills.map(safe).join(', ')}`;
+
+  // Uncategorised: keywords read well as one comma list, but phrases get one line each, like the
+  // original resume, because commas inside a phrase would make a comma list ambiguous.
+  return skills.some(isPhrase) ? skills.map(safe).join('\\\\\n') : skills.map(safe).join(', ');
 }
 
 function renderExperience(entry: Experience, safe: SafeText): string {

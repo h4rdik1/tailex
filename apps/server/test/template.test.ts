@@ -112,6 +112,26 @@ describe('renderResumeTex: sections', () => {
     expect(tex).not.toContain('\\textbf{Skills}');
   });
 
+  it('puts uncategorised skills that are phrases on one line each, not in a comma list', () => {
+    const resume = structuredClone(FICTIONAL_RESUME);
+    resume.skills = [
+      {
+        id: 'skills0',
+        category: 'Skills',
+        items: [
+          'Hand-sewing techniques for fine tailoring',
+          'Luxury fabrics, including wool, silk',
+        ],
+      },
+    ];
+    const tex = texFor(resume);
+
+    expect(tex).toContain(
+      'Hand-sewing techniques for fine tailoring\\\\\nLuxury fabrics, including wool, silk',
+    );
+    expect(tex).not.toContain('tailoring, Luxury');
+  });
+
   it('still labels real categories, even when several groups exist', () => {
     const tex = texFor();
 
