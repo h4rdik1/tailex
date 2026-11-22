@@ -37,6 +37,16 @@ describe('redactContact: link targets hidden inside the file', () => {
     expect(contact.links[0]?.label).toBe('github.com/asha-example'); // the visible one wins
   });
 
+  it('keeps only the full link when the visible one was cut by a line wrap', () => {
+    const wrapped = HEADER('Pune, India | linkedin.com/in/asha-example');
+
+    const { contact } = redactContact(wrapped, ['https://linkedin.com/in/asha-example-1a2b3c']);
+
+    expect(contact.links.map((link) => link.url)).toEqual([
+      'https://linkedin.com/in/asha-example-1a2b3c',
+    ]);
+  });
+
   it('drops hidden links that are not safe http(s) URLs for the PDF', () => {
     const { contact } = redactContact(text, [
       'https://a.example/}\\input{x}',

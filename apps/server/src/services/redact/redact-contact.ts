@@ -267,9 +267,18 @@ function toLinks(visibleUrls: readonly string[], hiddenUrls: readonly string[]):
     ...hiddenUrls.map((url) => ({ url, label: labelFor(url) })),
   ];
 
+  const safe = candidates.filter(({ url }) => SAFE_URL_PATTERN.test(url));
+  // A visible address cut by a line wrap ("…/hardik-mamgain" + "-ba5a27223" on the next line) is a
+  // prefix of the full link kept inside the file. Keep only the complete one.
+  const hiddenKeys = hiddenUrls.map(linkKey);
   const seen = new Set<string>();
-  return candidates
-    .filter(({ url }) => SAFE_URL_PATTERN.test(url))
+  return safe
+    .filter(({ url, label }) => {
+      const key = linkKey(url);
+      const isCutOff =
+        label === undefined && hiddenKeys.some((full) => full.startsWith(key) && full !== key);
+      return !isCutOff;
+    })
     .filter(({ url }) => {
       const key = linkKey(url);
       if (seen.has(key)) return false;
