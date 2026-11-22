@@ -6,3 +6,4 @@ export * from './parse.ts';
 export * from './render.ts';
 export * from './resume.ts';
 export * from './samples/fictional-resume.ts';
+export * from './tailor.ts';

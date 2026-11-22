@@ -1,0 +1,368 @@
+[
+  {
+    "canonical": "JavaScript",
+    "category": "Languages",
+    "aliases": ["js", "ecmascript", "es6", "es2015", "vanilla js"]
+  },
+  { "canonical": "TypeScript", "category": "Languages", "aliases": ["ts"] },
+  { "canonical": "Python", "category": "Languages", "aliases": ["python3", "python 3"] },
+  {
+    "canonical": "Java",
+    "category": "Languages",
+    "aliases": ["java 8", "java 11", "java 17", "java 21"]
+  },
+  { "canonical": "C++", "category": "Languages", "aliases": ["cpp", "c plus plus"] },
+  { "canonical": "C#", "category": "Languages", "aliases": ["csharp", "c sharp"] },
+  { "canonical": "C", "category": "Languages", "aliases": [], "ambiguous": true },
+  { "canonical": "Go", "category": "Languages", "aliases": ["golang"], "ambiguous": true },
+  { "canonical": "Rust", "category": "Languages", "aliases": [] },
+  { "canonical": "Ruby", "category": "Languages", "aliases": [] },
+  { "canonical": "PHP", "category": "Languages", "aliases": [] },
+  { "canonical": "Swift", "category": "Languages", "aliases": [], "ambiguous": true },
+  { "canonical": "Kotlin", "category": "Languages", "aliases": [] },
+  { "canonical": "Scala", "category": "Languages", "aliases": [] },
+  { "canonical": "R", "category": "Languages", "aliases": [], "ambiguous": true },
+  { "canonical": "SQL", "category": "Languages", "aliases": ["pl/sql", "t sql", "tsql", "plsql"] },
+  {
+    "canonical": "Bash",
+    "category": "Languages",
+    "aliases": ["shell scripting", "shell script", "shell scripts"]
+  },
+  { "canonical": "PowerShell", "category": "Languages", "aliases": [] },
+  { "canonical": "Perl", "category": "Languages", "aliases": [] },
+  { "canonical": "Dart", "category": "Languages", "aliases": [] },
+  { "canonical": "Elixir", "category": "Languages", "aliases": [] },
+  { "canonical": "Haskell", "category": "Languages", "aliases": [] },
+  { "canonical": "Lua", "category": "Languages", "aliases": [] },
+  { "canonical": "MATLAB", "category": "Languages", "aliases": [] },
+  { "canonical": "Objective-C", "category": "Languages", "aliases": ["objective c", "objc"] },
+  { "canonical": "Solidity", "category": "Languages", "aliases": [] },
+  { "canonical": "HTML", "category": "Languages", "aliases": ["html5", "html 5"] },
+  { "canonical": "CSS", "category": "Languages", "aliases": ["css3", "css 3"] },
+  { "canonical": "Sass", "category": "Languages", "aliases": ["scss"] },
+
+  { "canonical": "React", "category": "Frontend", "aliases": ["react.js", "reactjs", "react js"] },
+  { "canonical": "React Native", "category": "Frontend", "aliases": [] },
+  { "canonical": "Next.js", "category": "Frontend", "aliases": ["nextjs", "next js"] },
+  {
+    "canonical": "Vue.js",
+    "category": "Frontend",
+    "aliases": ["vue", "vuejs", "vue js", "vue 3", "vue3"]
+  },
+  {
+    "canonical": "Nuxt.js",
+    "category": "Frontend",
+    "aliases": ["nuxt", "nuxtjs", "nuxt js", "nuxt 3"]
+  },
+  { "canonical": "Angular", "category": "Frontend", "aliases": ["angular 2+"] },
+  { "canonical": "AngularJS", "category": "Frontend", "aliases": ["angular.js"] },
+  { "canonical": "Svelte", "category": "Frontend", "aliases": ["sveltekit"] },
+  { "canonical": "Redux", "category": "Frontend", "aliases": ["redux toolkit", "rtk"] },
+  {
+    "canonical": "React Query",
+    "category": "Frontend",
+    "aliases": ["tanstack query", "tanstack react query"]
+  },
+  { "canonical": "Tailwind CSS", "category": "Frontend", "aliases": ["tailwind", "tailwindcss"] },
+  { "canonical": "Bootstrap", "category": "Frontend", "aliases": [] },
+  { "canonical": "Material UI", "category": "Frontend", "aliases": ["mui", "material-ui"] },
+  { "canonical": "jQuery", "category": "Frontend", "aliases": [] },
+  { "canonical": "Webpack", "category": "Frontend", "aliases": [] },
+  { "canonical": "Vite", "category": "Frontend", "aliases": [] },
+  { "canonical": "Babel", "category": "Frontend", "aliases": [] },
+  { "canonical": "Storybook", "category": "Frontend", "aliases": [] },
+  { "canonical": "Three.js", "category": "Frontend", "aliases": ["threejs"] },
+  { "canonical": "D3.js", "category": "Frontend", "aliases": ["d3"] },
+  { "canonical": "Web Components", "category": "Frontend", "aliases": [] },
+  {
+    "canonical": "Responsive Design",
+    "category": "Frontend",
+    "aliases": ["responsive web design", "responsive layouts", "responsive ui"]
+  },
+  { "canonical": "Accessibility", "category": "Frontend", "aliases": ["a11y", "wcag"] },
+  {
+    "canonical": "Cross-Browser Compatibility",
+    "category": "Frontend",
+    "aliases": ["cross browser", "cross browser testing"]
+  },
+  { "canonical": "State Management", "category": "Frontend", "aliases": [] },
+  {
+    "canonical": "Progressive Web Apps",
+    "category": "Frontend",
+    "aliases": ["pwa", "pwas", "progressive web app"]
+  },
+
+  { "canonical": "Node.js", "category": "Backend", "aliases": ["node", "nodejs", "node js"] },
+  {
+    "canonical": "Express.js",
+    "category": "Backend",
+    "aliases": ["express", "expressjs", "express js"],
+    "ambiguous": ["express"]
+  },
+  { "canonical": "NestJS", "category": "Backend", "aliases": ["nest.js", "nestjs"] },
+  {
+    "canonical": "Spring Boot",
+    "category": "Backend",
+    "aliases": ["springboot", "spring framework"]
+  },
+  { "canonical": "Django", "category": "Backend", "aliases": [] },
+  { "canonical": "Flask", "category": "Backend", "aliases": [] },
+  { "canonical": "FastAPI", "category": "Backend", "aliases": [] },
+  { "canonical": "Ruby on Rails", "category": "Backend", "aliases": ["rails", "ror"] },
+  { "canonical": "Laravel", "category": "Backend", "aliases": [] },
+  { "canonical": "ASP.NET", "category": "Backend", "aliases": ["asp.net core", "aspnet"] },
+  { "canonical": ".NET", "category": "Backend", "aliases": ["dotnet", ".net core", "dot net"] },
+  {
+    "canonical": "REST APIs",
+    "category": "Backend",
+    "aliases": [
+      "rest",
+      "restful",
+      "restful api",
+      "restful apis",
+      "rest api",
+      "restful services",
+      "restful web services"
+    ]
+  },
+  { "canonical": "GraphQL", "category": "Backend", "aliases": [] },
+  { "canonical": "gRPC", "category": "Backend", "aliases": [] },
+  { "canonical": "WebSockets", "category": "Backend", "aliases": ["websocket", "socket.io"] },
+  { "canonical": "Microservices", "category": "Backend", "aliases": ["micro services"] },
+  {
+    "canonical": "JWT",
+    "category": "Backend",
+    "aliases": ["jwt authentication", "json web token", "json web tokens"]
+  },
+  { "canonical": "OAuth", "category": "Backend", "aliases": ["oauth2", "oauth 2.0", "oauth 2"] },
+  {
+    "canonical": "Authentication",
+    "category": "Backend",
+    "aliases": ["authorization", "authn", "authz", "role based access control", "rbac"]
+  },
+  {
+    "canonical": "Message Queues",
+    "category": "Backend",
+    "aliases": ["message queue", "message broker", "message brokers"]
+  },
+
+  { "canonical": "PostgreSQL", "category": "Databases", "aliases": ["postgres", "postgre sql"] },
+  { "canonical": "MySQL", "category": "Databases", "aliases": [] },
+  { "canonical": "MariaDB", "category": "Databases", "aliases": [] },
+  { "canonical": "SQLite", "category": "Databases", "aliases": [] },
+  { "canonical": "MongoDB", "category": "Databases", "aliases": ["mongo", "mongo db"] },
+  { "canonical": "Mongoose", "category": "Databases", "aliases": [] },
+  { "canonical": "Redis", "category": "Databases", "aliases": [] },
+  {
+    "canonical": "Elasticsearch",
+    "category": "Databases",
+    "aliases": ["elastic search", "opensearch"]
+  },
+  { "canonical": "DynamoDB", "category": "Databases", "aliases": ["dynamo db"] },
+  { "canonical": "Cassandra", "category": "Databases", "aliases": [] },
+  {
+    "canonical": "Oracle Database",
+    "category": "Databases",
+    "aliases": ["oracle db", "oracle sql"]
+  },
+  {
+    "canonical": "SQL Server",
+    "category": "Databases",
+    "aliases": ["mssql", "ms sql", "microsoft sql server"]
+  },
+  { "canonical": "Firebase", "category": "Databases", "aliases": ["firestore"] },
+  { "canonical": "Supabase", "category": "Databases", "aliases": [] },
+  { "canonical": "Snowflake", "category": "Databases", "aliases": [] },
+  { "canonical": "BigQuery", "category": "Databases", "aliases": ["big query"] },
+  { "canonical": "Neo4j", "category": "Databases", "aliases": [] },
+  { "canonical": "Prisma", "category": "Databases", "aliases": [] },
+  { "canonical": "TypeORM", "category": "Databases", "aliases": [] },
+  { "canonical": "Sequelize", "category": "Databases", "aliases": [] },
+  { "canonical": "Hibernate", "category": "Databases", "aliases": [] },
+  { "canonical": "SQLAlchemy", "category": "Databases", "aliases": [] },
+  {
+    "canonical": "Database Design",
+    "category": "Databases",
+    "aliases": ["data modeling", "data modelling", "schema design"]
+  },
+
+  { "canonical": "AWS", "category": "Cloud & DevOps", "aliases": ["amazon web services"] },
+  { "canonical": "Azure", "category": "Cloud & DevOps", "aliases": ["microsoft azure"] },
+  {
+    "canonical": "GCP",
+    "category": "Cloud & DevOps",
+    "aliases": ["google cloud", "google cloud platform"]
+  },
+  {
+    "canonical": "Docker",
+    "category": "Cloud & DevOps",
+    "aliases": ["containerization", "containerisation", "containers"]
+  },
+  { "canonical": "Kubernetes", "category": "Cloud & DevOps", "aliases": ["k8s"] },
+  { "canonical": "Terraform", "category": "Cloud & DevOps", "aliases": [] },
+  { "canonical": "Ansible", "category": "Cloud & DevOps", "aliases": [] },
+  { "canonical": "Jenkins", "category": "Cloud & DevOps", "aliases": [] },
+  { "canonical": "GitHub Actions", "category": "Cloud & DevOps", "aliases": [] },
+  { "canonical": "GitLab CI", "category": "Cloud & DevOps", "aliases": ["gitlab ci/cd"] },
+  {
+    "canonical": "CI/CD",
+    "category": "Cloud & DevOps",
+    "aliases": [
+      "cicd",
+      "ci cd",
+      "continuous integration",
+      "continuous delivery",
+      "continuous deployment"
+    ]
+  },
+  { "canonical": "Linux", "category": "Cloud & DevOps", "aliases": ["unix"] },
+  { "canonical": "Nginx", "category": "Cloud & DevOps", "aliases": [] },
+  { "canonical": "Serverless", "category": "Cloud & DevOps", "aliases": [] },
+  { "canonical": "AWS Lambda", "category": "Cloud & DevOps", "aliases": [] },
+  { "canonical": "Amazon S3", "category": "Cloud & DevOps", "aliases": ["s3"] },
+  { "canonical": "EC2", "category": "Cloud & DevOps", "aliases": ["amazon ec2"] },
+  { "canonical": "CloudFormation", "category": "Cloud & DevOps", "aliases": [] },
+  {
+    "canonical": "Helm",
+    "category": "Cloud & DevOps",
+    "aliases": ["helm charts"],
+    "ambiguous": true
+  },
+  { "canonical": "Prometheus", "category": "Cloud & DevOps", "aliases": [] },
+  { "canonical": "Grafana", "category": "Cloud & DevOps", "aliases": [] },
+  { "canonical": "Datadog", "category": "Cloud & DevOps", "aliases": [] },
+  { "canonical": "Kafka", "category": "Cloud & DevOps", "aliases": ["apache kafka"] },
+  { "canonical": "RabbitMQ", "category": "Cloud & DevOps", "aliases": ["rabbit mq"] },
+  { "canonical": "Vercel", "category": "Cloud & DevOps", "aliases": [] },
+  { "canonical": "Netlify", "category": "Cloud & DevOps", "aliases": [] },
+  { "canonical": "Heroku", "category": "Cloud & DevOps", "aliases": [] },
+  { "canonical": "Cloudflare", "category": "Cloud & DevOps", "aliases": [] },
+  { "canonical": "Infrastructure as Code", "category": "Cloud & DevOps", "aliases": ["iac"] },
+  { "canonical": "Monitoring", "category": "Cloud & DevOps", "aliases": ["observability"] },
+
+  { "canonical": "Jest", "category": "Testing", "aliases": [] },
+  { "canonical": "Vitest", "category": "Testing", "aliases": [] },
+  { "canonical": "Mocha", "category": "Testing", "aliases": [], "ambiguous": true },
+  { "canonical": "Chai", "category": "Testing", "aliases": [] },
+  { "canonical": "Cypress", "category": "Testing", "aliases": [] },
+  { "canonical": "Playwright", "category": "Testing", "aliases": [] },
+  { "canonical": "Selenium", "category": "Testing", "aliases": [] },
+  { "canonical": "JUnit", "category": "Testing", "aliases": [] },
+  { "canonical": "pytest", "category": "Testing", "aliases": [] },
+  {
+    "canonical": "Testing Library",
+    "category": "Testing",
+    "aliases": ["react testing library", "rtl"]
+  },
+  { "canonical": "Unit Testing", "category": "Testing", "aliases": ["unit tests", "unit test"] },
+  {
+    "canonical": "Integration Testing",
+    "category": "Testing",
+    "aliases": ["integration tests", "integration test"]
+  },
+  {
+    "canonical": "End-to-End Testing",
+    "category": "Testing",
+    "aliases": ["e2e", "e2e testing", "end to end tests"]
+  },
+  { "canonical": "Test-Driven Development", "category": "Testing", "aliases": ["tdd"] },
+  { "canonical": "QA", "category": "Testing", "aliases": ["quality assurance"] },
+
+  { "canonical": "Git", "category": "Tools", "aliases": ["version control"] },
+  { "canonical": "GitHub", "category": "Tools", "aliases": [] },
+  { "canonical": "GitLab", "category": "Tools", "aliases": [] },
+  { "canonical": "Bitbucket", "category": "Tools", "aliases": [] },
+  { "canonical": "Jira", "category": "Tools", "aliases": [] },
+  { "canonical": "Confluence", "category": "Tools", "aliases": [] },
+  { "canonical": "Postman", "category": "Tools", "aliases": [] },
+  { "canonical": "Figma", "category": "Tools", "aliases": [] },
+  { "canonical": "VS Code", "category": "Tools", "aliases": ["vscode", "visual studio code"] },
+  { "canonical": "npm", "category": "Tools", "aliases": [] },
+  { "canonical": "Yarn", "category": "Tools", "aliases": [] },
+  { "canonical": "pnpm", "category": "Tools", "aliases": [] },
+  { "canonical": "Maven", "category": "Tools", "aliases": [] },
+  { "canonical": "Gradle", "category": "Tools", "aliases": [] },
+  { "canonical": "Swagger", "category": "Tools", "aliases": ["openapi", "open api"] },
+  { "canonical": "Sentry", "category": "Tools", "aliases": [] },
+  {
+    "canonical": "Excel",
+    "category": "Tools",
+    "aliases": ["microsoft excel", "ms excel"],
+    "ambiguous": true
+  },
+  { "canonical": "Power BI", "category": "Tools", "aliases": ["powerbi"] },
+  { "canonical": "Tableau", "category": "Tools", "aliases": [] },
+  {
+    "canonical": "Jupyter",
+    "category": "Tools",
+    "aliases": ["jupyter notebook", "jupyter notebooks"]
+  },
+
+  { "canonical": "Pandas", "category": "Data & AI", "aliases": [] },
+  { "canonical": "NumPy", "category": "Data & AI", "aliases": [] },
+  { "canonical": "scikit-learn", "category": "Data & AI", "aliases": ["sklearn", "scikit learn"] },
+  { "canonical": "TensorFlow", "category": "Data & AI", "aliases": [] },
+  { "canonical": "PyTorch", "category": "Data & AI", "aliases": [] },
+  { "canonical": "Keras", "category": "Data & AI", "aliases": [] },
+  { "canonical": "Apache Spark", "category": "Data & AI", "aliases": ["pyspark"] },
+  { "canonical": "Airflow", "category": "Data & AI", "aliases": ["apache airflow"] },
+  { "canonical": "dbt", "category": "Data & AI", "aliases": [] },
+  { "canonical": "Hadoop", "category": "Data & AI", "aliases": [] },
+  { "canonical": "Machine Learning", "category": "Data & AI", "aliases": ["ml"] },
+  { "canonical": "Deep Learning", "category": "Data & AI", "aliases": [] },
+  { "canonical": "NLP", "category": "Data & AI", "aliases": ["natural language processing"] },
+  { "canonical": "Computer Vision", "category": "Data & AI", "aliases": ["opencv"] },
+  { "canonical": "Data Analysis", "category": "Data & AI", "aliases": ["data analytics"] },
+  { "canonical": "ETL", "category": "Data & AI", "aliases": ["data pipelines", "data pipeline"] },
+  {
+    "canonical": "LLMs",
+    "category": "Data & AI",
+    "aliases": ["llm", "large language models", "large language model"]
+  },
+  { "canonical": "Generative AI", "category": "Data & AI", "aliases": ["genai", "gen ai"] },
+  { "canonical": "LangChain", "category": "Data & AI", "aliases": [] },
+
+  { "canonical": "Agile", "category": "Concepts", "aliases": [] },
+  { "canonical": "Scrum", "category": "Concepts", "aliases": [] },
+  { "canonical": "Kanban", "category": "Concepts", "aliases": [] },
+  {
+    "canonical": "Object-Oriented Programming",
+    "category": "Concepts",
+    "aliases": ["oop", "object oriented", "object oriented design"]
+  },
+  { "canonical": "Functional Programming", "category": "Concepts", "aliases": [] },
+  { "canonical": "Design Patterns", "category": "Concepts", "aliases": ["design pattern"] },
+  {
+    "canonical": "Data Structures",
+    "category": "Concepts",
+    "aliases": ["data structures and algorithms", "dsa"]
+  },
+  { "canonical": "Algorithms", "category": "Concepts", "aliases": [] },
+  {
+    "canonical": "System Design",
+    "category": "Concepts",
+    "aliases": ["systems design", "software architecture"]
+  },
+  {
+    "canonical": "Code Review",
+    "category": "Concepts",
+    "aliases": ["code reviews", "pull request reviews", "peer review"]
+  },
+  {
+    "canonical": "Performance Optimization",
+    "category": "Concepts",
+    "aliases": ["performance optimisation", "performance tuning", "web performance"]
+  },
+  {
+    "canonical": "SEO",
+    "category": "Concepts",
+    "aliases": ["search engine optimization", "search engine optimisation"]
+  },
+  {
+    "canonical": "Event-Driven Architecture",
+    "category": "Concepts",
+    "aliases": ["event driven", "event driven design"]
+  },
+  { "canonical": "Security", "category": "Concepts", "aliases": ["application security", "owasp"] },
+  { "canonical": "Debugging", "category": "Concepts", "aliases": ["troubleshooting"] }
+]

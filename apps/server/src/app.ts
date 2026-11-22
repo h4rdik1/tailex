@@ -2,6 +2,7 @@ import path from 'node:path';
 import express, { type Express } from 'express';
 import { healthRouter } from './routes/health.ts';
 import { createKeyTestRouter } from './routes/key-test.ts';
+import { createKeywordsRouter } from './routes/keywords.ts';
 import { createParseRouter } from './routes/parse.ts';
 import { createRenderRouter } from './routes/render.ts';
 import { apiNotFound, createErrorHandler } from './middleware/error-handler.ts';
@@ -63,6 +64,7 @@ export function createApp(options: AppOptions = {}): Express {
   app.use(express.json({ limit: JSON_BODY_LIMIT }));
   app.use('/api', healthRouter);
   app.use('/api', createKeyTestRouter(registry, logger));
+  app.use('/api', createKeywordsRouter()); // no key: deterministic code only
   app.use(
     '/api',
     createRenderRouter({
