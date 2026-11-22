@@ -24,6 +24,8 @@
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
     "test:docker": "docker compose -f compose.dev.yaml run --rm --service-ports=false dev sh -c \"npm ci --no-audit --no-fund && npm run test:coverage\"",
+    "image:build": "docker build -t tailex .",
+    "image:run": "docker run --rm -p 8081:8080 --read-only --tmpfs /tmp --cap-drop ALL --security-opt no-new-privileges tailex",
     "dev:docker": "docker compose -f compose.dev.yaml run --rm --service-ports dev sh -c \"npm ci --no-audit --no-fund && npm run dev:server\""
   },
   "devDependencies": {
