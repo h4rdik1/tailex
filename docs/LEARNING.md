@@ -613,3 +613,35 @@ npm test                                # fast tests on Windows (compile tests s
 npm run test:docker                     # everything, with coverage gates, in Linux
 npm run lint && npm run typecheck       # code checks
 ```
+
+---
+
+## Phase 6 — Hardening and a production image (branch `phase-6`)
+
+### Three layers of protection, in plain words
+
+```
+browser ──► [ security headers + CSP ] ──► [ rate limit per visitor ] ──► our code
+```
+
+- **CSP (Content-Security-Policy)** is a list the server sends: "this page may load scripts, styles and images only from my own address". If an attacker manages to inject a script tag, the browser refuses to run it. The one exception is `blob:` for the PDF preview, because the PDF is shown from the bytes we send.
+- **Other headers:** `nosniff` (do not guess file types), `no-referrer` (do not tell other sites where you came from), HSTS (always use https), Permissions-Policy (the page may not use the camera, microphone, location...).
+- **Rate limit:** each visitor gets a number of requests per minute. A PDF build is the costly one, so it is stricter. Too many gives a 429 ("too many requests") and a `Retry-After` header saying when to try again.
+- **trust proxy:** behind Cloud Run every request seems to come from Google's servers. `trust proxy 1` tells Express to read the real visitor address from the header Google adds (one hop). Without it everybody would share one counter. With too many hops a visitor could fake the header.
+
+### Multi-stage Docker build
+
+Stage 1 has everything needed to _build_ the web app (Vite, TypeScript). Stage 2 starts again from a clean Node image, installs only what the server needs to _run_, and copies in the finished web files. The build tools never reach the final image: smaller, fewer things to attack. It runs as the unprivileged `node` user, and the test run used `--read-only` (the container cannot change its own files) and `--cap-drop ALL` (no special Linux powers): if the app works like that, an attacker who breaks in can do very little.
+
+### The e2e test
+
+One Playwright test walks the whole sample flow in a real browser, and fails on any console error, because that is how a CSP violation shows up. It showed a real surprise: with the production CSP a plain-http page on a non-localhost name loads blank (`upgrade-insecure-requests`), which is right for https and wrong for a test, so the test talks to `localhost`.
+
+### Interview Q&A (Phase 6)
+
+- **What does a CSP protect against?** Cross-site scripting: even if text is injected into the page, the browser will not run scripts from outside our own origin. We also never render raw HTML.
+- **Why are rate limits per instance, and is that a problem?** Counts live in memory on each container. With at most two, that doubles the allowance, which is fine for abuse protection. Strong guarantees would need a shared store, which we do not want (nothing is stored).
+- **Why `trust proxy 1` and not `true`?** `true` trusts every hop, so a visitor can send a fake `X-Forwarded-For` and dodge the limit. One hop is exactly Cloud Run.
+- **Why run as non-root and read-only?** Least privilege: a bug in the PDF or text parsing cannot write to the app or install anything.
+- **Why scale to zero but cap at two instances?** Zero cost when idle; the cap and a budget alert bound the cost under abuse.
+- **What went wrong with the lockfile?** `npm install` on Windows dropped Linux-only optional packages from `package-lock.json`, so the Linux `npm ci` refused it. Add dependencies from the Linux container.

@@ -4,7 +4,7 @@
 
 Upload a resume (PDF/DOCX) and get a clean, one-page, ATS-friendly PDF from a typeset LaTeX template. Then paste a job description: Tailex shows which skills you're missing, adds only the ones **you confirm** you have, and suggests bullet rewrites you accept or reject one by one. A code-level truth guard blocks any suggestion that adds skills, tools, employers or numbers you never wrote.
 
-**Live demo:** _coming soon_ · **Status:** Phase 1 (scaffold + CI). See [PROGRESS.md](docs/PROGRESS.md).
+**Live demo:** _coming soon_ (deploy steps are in [DEPLOY.md](docs/DEPLOY.md)) · **Status:** all features built; hardening and the production image are done. See [PROGRESS.md](docs/PROGRESS.md).
 
 ## Features
 
@@ -13,7 +13,8 @@ Upload a resume (PDF/DOCX) and get a clean, one-page, ATS-friendly PDF from a ty
 - **Bring your own key** (Gemini first). Your key, your quota
 - **Contact details redacted** before anything reaches the LLM
 - JD keyword match: matched, missing (required vs nice-to-have) and extra skills, with a score before/after
-- Bullet rewrite suggestions as an accept/reject diff; fabrications are shown as **Blocked**
+- Bullet rewrite suggestions as an accept/reject diff; fabrications (a new skill, number, name or link, or a bigger role such as "assisted" to "led") are shown as **Blocked**
+- Tell the AI the role you are aiming for and to keep your seniority
 - **Sample mode:** try the whole flow without a key
 - Light/dark mode, keyboard accessible, mobile friendly
 
@@ -39,7 +40,7 @@ More detail in [ARCHITECTURE.md](docs/ARCHITECTURE.md). Decisions and tradeoffs 
 - _"Your resume text, with contact details removed, is sent to your chosen LLM provider."_ Name, email, phone and links are replaced with placeholders **before** the LLM call and re-inserted only when rendering your PDF. Redaction is **best-effort**: review what's sent in the "See what's sent" panel.
 - Some providers' free tiers may use prompts to improve their products. Check your provider's terms.
 - Our app never logs request bodies, file contents or keys. Our hosting platform's request logs (Cloud Run) may record **IP address, user agent and timestamps**, but **never content or keys**.
-- Analytics, if enabled, are counts only (e.g. "a PDF was generated"), never content.
+- No analytics are enabled. If one is added later it will be counts only (e.g. "a PDF was generated"), never content.
 
 ## How the key is handled
 
@@ -87,9 +88,21 @@ npm run lint && npm run format:check && npm run typecheck && npm test && npm run
 
 Production-style run: `npm run build`, then `npm start`. Express serves the built UI and the API on one port.
 
+The real production image (what Cloud Run runs), started with a read-only filesystem and no extra privileges, on http://localhost:8081:
+
+```bash
+npm run image:build
+```
+
+```bash
+npm run image:run
+```
+
+Deploying it: [DEPLOY.md](docs/DEPLOY.md).
+
 ## Docs
 
-[SPEC](docs/SPEC.md) · [ARCHITECTURE](docs/ARCHITECTURE.md) · [DECISIONS](docs/DECISIONS.md) · [SECURITY](docs/SECURITY.md) · [TESTING](docs/TESTING.md) · [PROGRESS](docs/PROGRESS.md) · [LEARNING](docs/LEARNING.md)
+[DEPLOY](docs/DEPLOY.md) · [SPEC](docs/SPEC.md) · [ARCHITECTURE](docs/ARCHITECTURE.md) · [DECISIONS](docs/DECISIONS.md) · [SECURITY](docs/SECURITY.md) · [TESTING](docs/TESTING.md) · [PROGRESS](docs/PROGRESS.md) · [LEARNING](docs/LEARNING.md)
 
 ## License
 
