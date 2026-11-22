@@ -16,6 +16,7 @@ export default defineConfig({
       thresholds: enforceGates
         ? {
             'apps/server/src/services/latex/**': { lines: 80, branches: 80, functions: 80 },
+            'apps/server/src/services/keywords/**': { lines: 80, branches: 80, functions: 80 },
           }
         : {},
     },

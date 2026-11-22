@@ -5,6 +5,20 @@
  */
 export const TAILOR_PROMPT_VERSION = 'tailor-v1';
 
+/**
+ * The user message for tailoring: the job description in <jd> tags and the bullets as JSON
+ * [{id, text}] in <bullets> tags (docs/SPEC.md §11). Both are untrusted data. Any tag-like text
+ * inside them is removed first, so they can't "close" a block early and pose as instructions.
+ */
+export function buildTailorUserMessage(
+  jd: string,
+  bullets: readonly { id: string; text: string }[],
+): string {
+  const withoutTags = (text: string): string => text.replace(/<\/?(?:jd|bullets)>/gi, '');
+  const safeBullets = bullets.map((bullet) => ({ id: bullet.id, text: withoutTags(bullet.text) }));
+  return `<jd>\n${withoutTags(jd)}\n</jd>\n<bullets>\n${JSON.stringify(safeBullets)}\n</bullets>`;
+}
+
 export const TAILOR_SYSTEM_PROMPT = `You help a candidate align their EXISTING resume bullets with a job description.
 RULES
 1. Rewrite a bullet only to use the job description's terminology where the bullet already supports it.

@@ -14,7 +14,14 @@ import { findPlaceholders, findProblems } from './features/review/check-resume.t
 import { ReviewChecks } from './features/review/ReviewChecks.tsx';
 import { ReviewForm } from './features/review/ReviewForm.tsx';
 import { EMPTY_RESUME, resumeReducer } from './features/review/resume-reducer.ts';
-import { SAMPLE_REDACTED_PREVIEW, SAMPLE_RESUME } from './features/sample/sample-data.ts';
+import { SAMPLE_JD } from '@tailex/shared';
+import {
+  SAMPLE_REDACTED_PREVIEW,
+  SAMPLE_RESUME,
+  sampleTailor,
+} from './features/sample/sample-data.ts';
+import { TailorStep } from './features/tailor/TailorStep.tsx';
+import { useTailor, type TailorApi } from './features/tailor/useTailor.ts';
 import { SeeWhatsSent } from './features/upload/SeeWhatsSent.tsx';
 import { UploadStep } from './features/upload/UploadStep.tsx';
 import { ApiError, createApiClient } from './lib/api-client.ts';
@@ -47,6 +54,13 @@ export function App() {
   const [parsing, setParsing] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const { state: pdf, render } = usePdfRender(api.render);
+  const isSample = sent?.isSample ?? false;
+  // Sample mode answers the rewrite step from canned data: no key and no AI call.
+  const tailorApi = useMemo<TailorApi>(
+    () => ({ keywords: api.keywords, tailor: isSample ? sampleTailor : api.tailor }),
+    [api, isSample],
+  );
+  const tailor = useTailor({ resume, dispatch: dispatchResume, api: tailorApi });
 
   const problems = useMemo(() => findProblems(resume), [resume]);
   const placeholders = useMemo(() => findPlaceholders(resume), [resume]);
@@ -59,6 +73,7 @@ export function App() {
     try {
       const result = await api.parse(file);
       dispatchResume({ type: 'replace', resume: result.resume });
+      tailor.reset(); // a new resume: the old job analysis is not about it
       setSent({ text: result.redactedPreview, isSample: false });
       dispatchStep({ type: 'advance', step: 'review' });
     } catch (error) {
@@ -71,6 +86,8 @@ export function App() {
   function loadSample(): void {
     setUploadError(null);
     dispatchResume({ type: 'replace', resume: SAMPLE_RESUME });
+    tailor.reset();
+    tailor.setJd(SAMPLE_JD); // the sample comes with its own job description
     setSent({ text: SAMPLE_REDACTED_PREVIEW, isSample: true });
     dispatchStep({ type: 'advance', step: 'review' });
   }
@@ -157,7 +174,14 @@ export function App() {
                   />
                 }
               />
-              <div>
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  onClick={() => {
+                    dispatchStep({ type: 'advance', step: 'tailor' });
+                  }}
+                >
+                  Tailor to a job description
+                </Button>
                 <Button
                   variant="secondary"
                   onClick={() => {
@@ -168,6 +192,17 @@ export function App() {
                 </Button>
               </div>
             </>
+          )}
+
+          {steps.current === 'tailor' && (
+            <TailorStep
+              tailor={tailor}
+              isSample={isSample}
+              onPreview={goToPreview}
+              onContinue={() => {
+                dispatchStep({ type: 'advance', step: 'export' });
+              }}
+            />
           )}
 
           {steps.current === 'export' && (

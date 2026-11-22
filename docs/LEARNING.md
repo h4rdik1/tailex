@@ -490,6 +490,110 @@ match character for character, and a test compares them. Changing one without th
 - **Why must the prompt in code match the spec?** The spec is the reviewed source of truth for
   what we send to a third party. A test makes a silent edit impossible.
 
+## Phase 5 — Tailor to a job (branch `phase-5`)
+
+### The flow in plain words
+
+```
+paste a job description ──► Analyze ──► matched / missing / extra skills + score     (code only, no AI, no key)
+                                  │
+              tick only the skills you really have ──► "Add to Skills"               (our code adds them)
+                                  │
+                     "Suggest bullet rewrites" ──► AI rewords bullets                (uses your key)
+                                  │
+                    truth guard checks EVERY rewrite (code) ──► ok / blocked + reason
+                                  │
+                      Accept / Reject each as a word diff ──► your resume changes only now
+```
+
+The AI is the least trusted part. It never sees your contact details, never sees the skills you ticked,
+and nothing it writes reaches the resume without passing a check written in code **and** a click from you.
+
+### How the keyword engine finds a skill
+
+It is a list (`skills.json`) and a careful search, not an AI. For each skill name we look for the text and
+then check what is **around** it:
+
+- `c` is found inside `c++`, so we look at the next character: a `+` means it is a different skill.
+- `java` is found inside `javascript`: the next character is a letter, so no.
+- `go` is a normal English word ("go to market"), so `Go` only counts with a capital G **and** when it looks
+  like a list ("Python, Go" or "Languages: Go").
+
+We use `indexOf`, not a regular expression built from the text. A regex can be made to take forever by
+nasty input (ReDoS); `indexOf` takes time proportional to the text, and a test proves a 15 000-character
+single word is fast.
+
+Is it required? We read the sentence ("must have", "a plus") and the heading above it ("Requirements",
+"Nice to have"). The score counts required skills double.
+
+### Fail closed
+
+The truth guard is yours to write. Until you do, the stub says "blocked" to everything. That is the
+safe default: if the check is missing, broken, or throws an error, the answer is **no**, never "probably
+fine". It is the same idea as a locked door that opens only for a key, instead of a door that locks only
+if someone remembers to.
+
+### The word diff (LCS) in one picture
+
+To show what changed between two sentences we find the longest list of words they share, in order. Words
+only in the old one are struck through, words only in the new one are highlighted:
+
+```
+Built a React dashboard...      shared words: "a React dashboard ..."
+Developed a React and TypeScript dashboard...     removed: Built      added: Developed, and TypeScript
+```
+
+It is a small table (rows = old words, columns = new words) filled from the bottom right. About 40 lines,
+so no library was needed.
+
+### Stale answers and double clicks
+
+If you click Analyze twice, or edit the page while a request is running, an old slow answer could arrive
+last and overwrite a newer one. `useTailor` numbers every request; only the newest number may update the
+screen. Clicking while busy does nothing. A suggestion for a bullet you edited after the rewrite arrived
+is marked **outdated**, because applying it would silently undo your edit.
+
+### Interview Q&A (Phase 5)
+
+- **Why not ask the AI to extract the skills?** It is slower, costs money, can invent, and gives a
+  different answer each time. A list plus careful matching is free, instant, testable and repeatable.
+- **How do you stop the AI adding a skill you don't have?** Three layers: the prompt says no, the code
+  (truth guard) blocks it, and you must click Accept. Only the code and the click are security.
+- **What is a ReDoS and how did you avoid it?** A regular expression that takes exponential time on
+  crafted input. We never build a regex from user text; we use `indexOf` with boundary checks.
+- **Why are confirmed skills added by your code and not sent to the AI?** If the AI knew you "have"
+  Kubernetes it could write "deployed with Kubernetes" in a bullet about something else. Adding the skill
+  to the Skills list says only "I know it", which is what you confirmed.
+- **Why is "fail closed" better here?** A false block costs the user one click. A false pass puts a lie on
+  a resume.
+- **How do you test the AI step without an AI?** `createMockProvider` returns scripted answers, including
+  bad ones (wrong shape, too long, extra keys), so every error path runs.
+- **How do you keep the UI from showing an old answer?** A request counter in a ref: only the newest
+  request may set state.
+
+### How the truth guard works (`truth-guard.ts`)
+
+It compares the AI's rewrite with the original bullet and asks one question: **did it add a fact?**
+
+```
+suggested ──► cut out links/emails/phones ──► find skills, numbers, names ──► anything NEW?  ──► blocked + reason
+original  ──► (same steps)                                                       │ no
+                                                                                 ▼
+                                                                    length check (1.5x + 20) ──► ok
+```
+
+- **Skills:** reuse the keyword scanner. A skill in the rewrite that the bullet did not have is blocked, unless you confirmed it.
+- **Numbers:** compared by _value_: `1,000` = `1000`, `1.5k` = `1500`, `$5M` = `5 million`, `40%` = `40 percent`, `ten` = `10`. `40` is not `40%`. Digits glued to letters (`S3`, `p95`) are names, not numbers.
+- **Names:** an acronym or a capitalised word that is not the start of a sentence ("at Stripe") must already be in the bullet.
+- **Same bullet, not the whole resume:** "Docker" listed under Skills does not make it true of _this_ bullet.
+- **Never throws:** if anything fails the answer is "blocked" (fail closed).
+
+Interview Q&A: _Why compare numbers by value?_ So a harmless reformatting is not blocked and a changed value is.
+_Why not trust the prompt?_ A prompt is a request; this is a check. _Why accept false blocks?_ One click vs a lie on a resume.
+_Limits:_ it cannot judge meaning ("led" vs "assisted"), and "one" is not treated as a number.
+
+---
+
 ---
 
 ## Commands cheat sheet

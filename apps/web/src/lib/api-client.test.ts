@@ -81,6 +81,59 @@ describe('api-client: where the key goes', () => {
     expect(await client.render(FICTIONAL_RESUME)).toMatchObject({ layout: null, fill: null });
   });
 
+  it('keywords NEVER sends the key, and sends the resume and job description in the body', async () => {
+    const analysis = { matched: ['React'], missing: [], extra: [], score: 100, jdSkillCount: 1 };
+    const { client, seen } = setup(Response.json(analysis));
+
+    const result = await client.keywords(FICTIONAL_RESUME, 'We use React');
+
+    expect(seen[0]?.url).toBe('/api/keywords');
+    expect(JSON.stringify(seen[0]?.init)).not.toContain(KEY);
+    expect(headersOf(seen[0])['x-llm-key']).toBeUndefined();
+    expect(JSON.parse(seen[0]?.init.body as string)).toEqual({
+      resume: FICTIONAL_RESUME,
+      jd: 'We use React',
+    });
+    expect(result).toEqual(analysis);
+  });
+
+  it('tailor sends the key as a header only, never in the url or the body', async () => {
+    const reply = { suggestions: [], bulletsConsidered: 0, bulletsTotal: 0, ignored: 0 };
+    const { client, seen } = setup(Response.json(reply));
+
+    await client.tailor(FICTIONAL_RESUME, 'We use React', ['Kubernetes']);
+
+    expect(seen[0]?.url).toBe('/api/tailor');
+    expect(headersOf(seen[0])).toMatchObject({ 'x-llm-key': KEY, 'x-llm-provider': 'gemini' });
+    expect(seen[0]?.url).not.toContain(KEY);
+    expect(seen[0]?.init.body as string).not.toContain(KEY);
+    expect(JSON.parse(seen[0]?.init.body as string)).toEqual({
+      resume: FICTIONAL_RESUME,
+      jd: 'We use React',
+      confirmedSkills: ['Kubernetes'],
+    });
+  });
+
+  it('tailor refuses to run without a key, before touching the network', async () => {
+    const { client, seen } = setup(Response.json({}), '');
+
+    await expect(client.tailor(FICTIONAL_RESUME, 'x', [])).rejects.toMatchObject({
+      code: 'KEY_MISSING',
+    });
+    expect(seen).toHaveLength(0);
+  });
+
+  it('keywords and tailor reject an answer in the wrong shape', async () => {
+    const { client } = setup(Response.json({ surprise: true }));
+
+    await expect(client.keywords(FICTIONAL_RESUME, 'x')).rejects.toMatchObject({
+      code: 'BAD_RESPONSE',
+    });
+    await expect(client.tailor(FICTIONAL_RESUME, 'x', [])).rejects.toMatchObject({
+      code: 'BAD_RESPONSE',
+    });
+  });
+
   it('health NEVER sends the key', async () => {
     const { client, seen } = setup(Response.json({ ok: true }));
 
