@@ -571,6 +571,14 @@ is marked **outdated**, because applying it would silently undo your edit.
 - **How do you keep the UI from showing an old answer?** A request counter in a ref: only the newest
   request may set state.
 
+### Telling the AI what you want (`tailor-v2`)
+
+Two optional inputs under "Reword your bullets": the **role you are aiming for** and **keep my seniority** (on by default). They go to the AI inside a `<preferences>` block, and the prompt says "keep "assisted" at that level".
+
+- It is a _request_. The code that really protects you is still the truth guard (and your Accept click).
+- The role you type is user text, so it is treated like any untrusted text: tags stripped, emails/phones removed, length limited.
+- Interview Q&A: _Why not just trust the prompt?_ A prompt can be ignored or tricked; code cannot. _Why still add it, then?_ Better input gives better suggestions, so fewer blocked ones.
+
 ### How the truth guard works (`truth-guard.ts`)
 
 It compares the AI's rewrite with the original bullet and asks one question: **did it add a fact?**

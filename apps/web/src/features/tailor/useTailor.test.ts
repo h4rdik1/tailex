@@ -279,6 +279,29 @@ describe('useTailor: adding skills', () => {
 });
 
 describe('useTailor: suggestions', () => {
+  it('sends the role and seniority choice, and resets them for a new resume', async () => {
+    const api = fakeApi();
+    const { result } = await analyzed(api);
+    act(() => {
+      result.current.tailor.setPreferences({
+        targetRole: 'Backend Engineer',
+        keepSeniority: false,
+      });
+    });
+
+    await act(() => result.current.tailor.suggest());
+
+    expect(api.tailor).toHaveBeenCalledWith(expect.anything(), expect.any(String), [], {
+      targetRole: 'Backend Engineer',
+      keepSeniority: false,
+    });
+
+    act(() => {
+      result.current.tailor.reset();
+    });
+    expect(result.current.tailor.preferences).toEqual({ targetRole: '', keepSeniority: true });
+  });
+
   it('asks the server with the confirmed skills and shows every suggestion as pending', async () => {
     const api = fakeApi();
     const { result } = await analyzed(api);
@@ -291,9 +314,12 @@ describe('useTailor: suggestions', () => {
 
     await act(() => result.current.tailor.suggest());
 
-    expect(api.tailor).toHaveBeenCalledWith(expect.anything(), 'We need Terraform and Jest', [
-      'Terraform',
-    ]);
+    expect(api.tailor).toHaveBeenCalledWith(
+      expect.anything(),
+      'We need Terraform and Jest',
+      ['Terraform'],
+      { targetRole: '', keepSeniority: true },
+    );
     expect(result.current.tailor.suggestions.map((v) => v.decision)).toEqual([
       'pending',
       'pending',

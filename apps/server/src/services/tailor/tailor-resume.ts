@@ -2,6 +2,7 @@ import {
   LlmTailorOutputSchema,
   TAILOR_LIMITS,
   type ResumeData,
+  type TailorPreferences,
   type TailorResponse,
   type TailorSuggestion,
 } from '@tailex/shared';
@@ -33,6 +34,7 @@ export interface TailorInput {
   resume: ResumeData;
   jd: string;
   confirmedSkills: readonly string[];
+  preferences: TailorPreferences;
   provider: LlmProvider;
   apiKey: string;
   truthGuard: TruthGuard;
@@ -72,6 +74,7 @@ export async function tailorResume(input: TailorInput): Promise<TailorResponse> 
     user: buildTailorUserMessage(
       redactText(jd, name).text,
       bullets.map((b) => ({ id: b.id, text: b.redacted })),
+      { ...input.preferences, targetRole: redactText(input.preferences.targetRole, name).text },
     ),
     jsonSchema: TAILOR_JSON_SCHEMA,
     temperature: TAILOR_TEMPERATURE,

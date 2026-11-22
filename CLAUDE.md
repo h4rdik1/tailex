@@ -61,4 +61,4 @@ Auth, database, payments, multiple templates, cover letters, saved resumes, serv
 
 ## Prompts
 
-Runtime prompts live only in `apps/server/src/prompts/parse.ts` (`parse-v1`) and `tailor.ts` (`tailor-v1`) as versioned constants, stored verbatim from docs/SPEC.md. Never in the browser. Single call, JSON mode, temperature 0–0.3. Show the final prompt text before first use.
+Runtime prompts live only in `apps/server/src/prompts/parse.ts` (`parse-v1`) and `tailor.ts` (`tailor-v2`) as versioned constants, stored verbatim from docs/SPEC.md. Never in the browser. Single call, JSON mode, temperature 0–0.3. Show the final prompt text before first use.

@@ -15,6 +15,7 @@ import {
   type PublicProvider,
   type ResumeData,
   type TailorResponse,
+  type TailorPreferences,
 } from '@tailex/shared';
 import { ERROR_MESSAGES, type ClientErrorCode } from './error-messages.ts';
 
@@ -71,7 +72,12 @@ export interface ApiClient {
   /** Matched / missing / extra skills. Deterministic on the server: never sends the key. */
   keywords: (resume: ResumeData, jd: string) => Promise<KeywordsResponse>;
   /** Bullet rewrites. The only tailoring call that sends the key. */
-  tailor: (resume: ResumeData, jd: string, confirmedSkills: string[]) => Promise<TailorResponse>;
+  tailor: (
+    resume: ResumeData,
+    jd: string,
+    confirmedSkills: string[],
+    preferences: TailorPreferences,
+  ) => Promise<TailorResponse>;
 }
 
 export function createApiClient(keys: KeySource, fetchFn: typeof fetch = fetch): ApiClient {
@@ -126,11 +132,11 @@ export function createApiClient(keys: KeySource, fetchFn: typeof fetch = fetch):
       return parseOrThrow(KeywordsResponseSchema, await response.json());
     },
 
-    async tailor(resume, jd, confirmedSkills) {
+    async tailor(resume, jd, confirmedSkills, preferences) {
       const response = await send('/api/tailor', {
         method: 'POST',
         headers: { ...keyHeaders(), 'content-type': 'application/json' },
-        body: JSON.stringify({ resume, jd, confirmedSkills }),
+        body: JSON.stringify({ resume, jd, confirmedSkills, preferences }),
       });
       return parseOrThrow(TailorResponseSchema, await response.json());
     },

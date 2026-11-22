@@ -1,8 +1,10 @@
 import { useCallback, useEffect, useRef, useState, type Dispatch } from 'react';
 import {
+  DEFAULT_TAILOR_PREFERENCES,
   TAILOR_LIMITS,
   type KeywordsResponse,
   type ResumeData,
+  type TailorPreferences,
   type TailorResponse,
   type TailorSuggestion,
 } from '@tailex/shared';
@@ -13,7 +15,12 @@ import { findBullet, planSkillAdditions } from './apply-changes.ts';
 /** The two server calls the Tailor step needs. Passed in, so tests (and sample mode) can fake them. */
 export interface TailorApi {
   keywords: (resume: ResumeData, jd: string) => Promise<KeywordsResponse>;
-  tailor: (resume: ResumeData, jd: string, confirmedSkills: string[]) => Promise<TailorResponse>;
+  tailor: (
+    resume: ResumeData,
+    jd: string,
+    confirmedSkills: string[],
+    preferences: TailorPreferences,
+  ) => Promise<TailorResponse>;
 }
 
 export type Decision = 'pending' | 'accepted' | 'rejected';
@@ -71,6 +78,7 @@ export function useTailor({
   const [confirmed, setConfirmed] = useState<readonly string[]>([]);
   const [suggestions, setSuggestions] = useState<readonly SuggestionView[]>([]);
   const [meta, setMeta] = useState<SuggestionMeta | null>(null);
+  const [preferences, setPreferences] = useState<TailorPreferences>(DEFAULT_TAILOR_PREFERENCES);
   const [busy, setBusy] = useState<Busy>('idle');
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
@@ -181,7 +189,7 @@ export function useTailor({
     setError(null);
     setNotice(null);
     try {
-      const result = await api.tailor(resume, analysis.jd, [...confirmed]);
+      const result = await api.tailor(resume, analysis.jd, [...confirmed], preferences);
       if (id !== latest.current) return;
       setSuggestions(result.suggestions.map((suggestion) => ({ suggestion, decision: 'pending' })));
       setMeta({
@@ -194,7 +202,7 @@ export function useTailor({
     } finally {
       if (id === latest.current) setBusy('idle');
     }
-  }, [analysis, api, busy, confirmed, jdChanged, resume]);
+  }, [analysis, api, busy, confirmed, jdChanged, preferences, resume]);
 
   /** The bullet changed (or was deleted) after the rewrite arrived: it can no longer be applied. */
   const isOutdated = useCallback(
@@ -271,6 +279,7 @@ export function useTailor({
     setConfirmed([]);
     setSuggestions([]);
     setMeta(null);
+    setPreferences(DEFAULT_TAILOR_PREFERENCES);
     setBusy('idle');
     setError(null);
     setNotice(null);
@@ -285,6 +294,8 @@ export function useTailor({
     confirmed,
     suggestions,
     meta,
+    preferences,
+    setPreferences,
     busy,
     error,
     notice,

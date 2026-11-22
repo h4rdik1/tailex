@@ -107,7 +107,7 @@ cvfit/
 │        │  ├─ latex/           # escapeLatex (hand-written), template, compile sandbox, log parser
 │        │  ├─ keywords/        # engine + skills.json
 │        │  └─ truth-guard/     # hand-written
-│        └─ prompts/            # parse.ts (parse-v2), tailor.ts (tailor-v1)
+│        └─ prompts/            # parse.ts (parse-v2), tailor.ts (tailor-v2)
 └─ packages/
    └─ shared/                   # Zod schemas + inferred types + error codes
 ```

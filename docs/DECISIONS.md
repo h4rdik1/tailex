@@ -289,6 +289,14 @@ Short ADRs. Format: **Context · Options · Choice · Tradeoffs.** New decisions
 - **Known limits:** it checks added facts and verb strength, not full meaning ("was part of the team" -> "drove the team" passes); "two hundred" is two numbers, so an original "200" blocks it (a false block, never a false pass); a skill the list does not know is only caught if it looks like a name.
 - **Tests:** the 51 spec tests pass unchanged; the stub-era test in `tailor.test.ts` was updated because the real guard now gives real reasons (a rewrite adding TypeScript is blocked with that reason, a pure rephrasing passes).
 
+## ADR-041 — Prompt `tailor-v2`: the candidate's wishes (target role, keep seniority)
+
+- **Context:** the truth guard (ADR-040) cannot judge meaning, so "assisted" could become "led" if the verb is not on its list. The candidate also knows which job they are aiming for. Both are better passed to the AI than guessed.
+- **Decision:** the tailor request carries `preferences { targetRole (<= 80 chars, default ""), keepSeniority (default true) }`. The system prompt gets one new rule (7): prefer wording that suits the role without adding facts, and never sound more senior or more in charge than the bullet says when `keepSeniority` is on. Version `tailor-v1` becomes `tailor-v2`; SPEC §11 and `prompts/tailor.ts` are identical (a test compares them).
+- **Safety:** the preferences travel in a `<preferences>` block as JSON data, like `<jd>` and `<bullets>`. Tag-like text is stripped from the role (so it cannot close the block and give orders), and the role goes through the same PII redaction as the bullets (an email or phone typed into it is removed). Invalid values give a 400 and no AI call. **A prompt is not security:** the guard still runs on every rewrite, so the preferences only make the AI's suggestions better.
+- **Not done:** years of experience. Resume dates come in too many formats to compute reliably, and a wrong number would mislead the AI.
+- **Verified with a real Gemini call** (fictional resume and job description): the AI returned one rewrite that reused the job's wording ("Improved API performance and reduced response times...") and kept every number and skill; the guard passed it. With a job description that matched the bullets already, the AI returned nothing and the UI said so.
+
 ## Pending
 
 - **Analytics:** Cloudflare Web Analytics vs Umami vs GoatCounter. Owner decides in Phase 6. Counts only: `resume_uploaded`, `pdf_generated`, `sample_used`.

@@ -11,6 +11,8 @@ export const TAILOR_LIMITS = {
   suggested: RESUME_LIMITS.bullet,
   reason: 300,
   confirmedSkills: 30,
+  /** The job title the candidate is aiming for ('Backend Engineer'). */
+  targetRole: 80,
 } as const;
 
 /** The job description, trimmed. Empty or whitespace-only is rejected with a readable message. */
@@ -63,6 +65,21 @@ export const KeywordsResponseSchema = z.object({
 });
 export type KeywordsResponse = z.infer<typeof KeywordsResponseSchema>;
 
+/**
+ * What the candidate wants from the rewrite (ADR-041). Both are only wishes passed to the AI: the
+ * truth guard in code still decides. `keepSeniority` defaults to on, the safe choice.
+ */
+export const TailorPreferencesSchema = z.object({
+  targetRole: z.string().trim().max(TAILOR_LIMITS.targetRole).default(''),
+  keepSeniority: z.boolean().default(true),
+});
+export type TailorPreferences = z.infer<typeof TailorPreferencesSchema>;
+
+export const DEFAULT_TAILOR_PREFERENCES: TailorPreferences = {
+  targetRole: '',
+  keepSeniority: true,
+};
+
 /** Body of `POST /api/tailor`. `confirmedSkills` are canonical names the job description asks for. */
 export const TailorRequestSchema = z.object({
   resume: ResumeDataSchema,
@@ -71,11 +88,12 @@ export const TailorRequestSchema = z.object({
     .array(z.string().min(1).max(60))
     .max(TAILOR_LIMITS.confirmedSkills)
     .default([]),
+  preferences: TailorPreferencesSchema.default(DEFAULT_TAILOR_PREFERENCES),
 });
 export type TailorRequest = z.infer<typeof TailorRequestSchema>;
 
 /**
- * Exactly what the LLM must return for prompt `tailor-v1` (docs/SPEC.md §11). `.strict()` rejects
+ * Exactly what the LLM must return for prompt `tailor-v2` (docs/SPEC.md §11). `.strict()` rejects
  * extra keys. The truth guard, not this schema, decides whether a suggestion is true.
  */
 export const LlmTailorOutputSchema = z

@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { FICTIONAL_RESUME } from '@tailex/shared';
+import { FICTIONAL_RESUME, type TailorPreferences } from '@tailex/shared';
 import { ApiError, createApiClient, type KeySource } from './api-client.ts';
 
 const KEY = 'test-key-1234567890';
+const PREFS: TailorPreferences = { targetRole: 'Backend Engineer', keepSeniority: true };
 
 interface Seen {
   url: string;
@@ -101,7 +102,7 @@ describe('api-client: where the key goes', () => {
     const reply = { suggestions: [], bulletsConsidered: 0, bulletsTotal: 0, ignored: 0 };
     const { client, seen } = setup(Response.json(reply));
 
-    await client.tailor(FICTIONAL_RESUME, 'We use React', ['Kubernetes']);
+    await client.tailor(FICTIONAL_RESUME, 'We use React', ['Kubernetes'], PREFS);
 
     expect(seen[0]?.url).toBe('/api/tailor');
     expect(headersOf(seen[0])).toMatchObject({ 'x-llm-key': KEY, 'x-llm-provider': 'gemini' });
@@ -111,13 +112,14 @@ describe('api-client: where the key goes', () => {
       resume: FICTIONAL_RESUME,
       jd: 'We use React',
       confirmedSkills: ['Kubernetes'],
+      preferences: PREFS,
     });
   });
 
   it('tailor refuses to run without a key, before touching the network', async () => {
     const { client, seen } = setup(Response.json({}), '');
 
-    await expect(client.tailor(FICTIONAL_RESUME, 'x', [])).rejects.toMatchObject({
+    await expect(client.tailor(FICTIONAL_RESUME, 'x', [], PREFS)).rejects.toMatchObject({
       code: 'KEY_MISSING',
     });
     expect(seen).toHaveLength(0);
@@ -129,7 +131,7 @@ describe('api-client: where the key goes', () => {
     await expect(client.keywords(FICTIONAL_RESUME, 'x')).rejects.toMatchObject({
       code: 'BAD_RESPONSE',
     });
-    await expect(client.tailor(FICTIONAL_RESUME, 'x', [])).rejects.toMatchObject({
+    await expect(client.tailor(FICTIONAL_RESUME, 'x', [], PREFS)).rejects.toMatchObject({
       code: 'BAD_RESPONSE',
     });
   });

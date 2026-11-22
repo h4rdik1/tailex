@@ -1,6 +1,7 @@
+import { TAILOR_LIMITS } from '@tailex/shared';
 import { Button } from '../../components/ui/button.tsx';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card.tsx';
-import { FieldError, Hint } from '../../components/ui/fields.tsx';
+import { FieldError, Hint, Input, Label } from '../../components/ui/fields.tsx';
 import { JdInput } from './JdInput.tsx';
 import { ScoreMeter } from './ScoreMeter.tsx';
 import { SkillChips } from './SkillChips.tsx';
@@ -90,6 +91,38 @@ export function TailorStep({ tailor, isSample, onPreview, onContinue }: TailorSt
                   ? 'This is the sample: no key is used and no AI is called.'
                   : 'Your resume text, with contact details removed, and the job description are sent to your AI provider using your key.'}
               </Hint>
+              <div className="flex flex-col gap-2">
+                <Label htmlFor="target-role">Role you are aiming for (optional)</Label>
+                <Input
+                  id="target-role"
+                  value={tailor.preferences.targetRole}
+                  maxLength={TAILOR_LIMITS.targetRole}
+                  placeholder="e.g. Backend Engineer"
+                  onChange={(event) => {
+                    tailor.setPreferences({
+                      ...tailor.preferences,
+                      targetRole: event.target.value,
+                    });
+                  }}
+                />
+                <label className="flex items-start gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    className="mt-1"
+                    checked={tailor.preferences.keepSeniority}
+                    onChange={(event) => {
+                      tailor.setPreferences({
+                        ...tailor.preferences,
+                        keepSeniority: event.target.checked,
+                      });
+                    }}
+                  />
+                  <span>
+                    Keep my seniority: do not make me sound more senior or more in charge than my
+                    bullets say.
+                  </span>
+                </label>
+              </div>
               <div>
                 <Button
                   disabled={tailor.busy !== 'idle' || tailor.jdChanged}

@@ -28,8 +28,8 @@ describe('runtime prompts', () => {
     expect(PARSE_SYSTEM_PROMPT).toBe(promptFromSpec('`PARSE_SYSTEM_PROMPT`'));
   });
 
-  it('tailor-v1 is stored verbatim from the spec', () => {
-    expect(TAILOR_PROMPT_VERSION).toBe('tailor-v1');
+  it('tailor-v2 is stored verbatim from the spec', () => {
+    expect(TAILOR_PROMPT_VERSION).toBe('tailor-v2');
     expect(TAILOR_SYSTEM_PROMPT).toBe(promptFromSpec('`TAILOR_SYSTEM_PROMPT`'));
   });
 

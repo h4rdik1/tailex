@@ -125,6 +125,23 @@ describe('Tailor step in sample mode (no key, no AI call)', () => {
     );
   });
 
+  it('offers the role box and a seniority checkbox that is ticked by default', async () => {
+    const user = userEvent.setup();
+    await openTailorWithSample(user);
+    await user.click(screen.getByRole('button', { name: 'Analyze' }));
+    await screen.findByText('Skills the job asks for');
+
+    const role = screen.getByLabelText(/Role you are aiming for/);
+    expect(role).toHaveValue('');
+    expect(screen.getByRole('checkbox', { name: /Keep my seniority/ })).toBeChecked();
+
+    await user.type(role, 'Backend Engineer');
+    await user.click(screen.getByRole('checkbox', { name: /Keep my seniority/ }));
+
+    expect(role).toHaveValue('Backend Engineer');
+    expect(screen.getByRole('checkbox', { name: /Keep my seniority/ })).not.toBeChecked();
+  });
+
   it('asks for a job description first, and explains instead of failing', async () => {
     const user = userEvent.setup();
     await openTailorWithSample(user);
