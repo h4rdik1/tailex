@@ -1,4 +1,9 @@
-import { FICTIONAL_RESUME, type ResumeData } from '@tailex/shared';
+import {
+  FICTIONAL_RESUME,
+  SAMPLE_TAILOR_RESPONSE,
+  type ResumeData,
+  type TailorResponse,
+} from '@tailex/shared';
 
 /** Sample mode: a fictional resume, loaded with no key and no AI call (docs/SPEC.md). */
 export const SAMPLE_RESUME: ResumeData = FICTIONAL_RESUME;
@@ -28,3 +33,17 @@ Budget Buddy (React, Express, SQLite)
 
 EDUCATION
 Example Institute of Technology, B.Tech, Computer Engineering, Pune, India (2019 to 2023)`;
+
+/**
+ * Sample mode's stand-in for POST /api/tailor: the canned answer after a short pause, so the
+ * "Working…" state is visible. No network, no key, no AI.
+ */
+export function sampleTailor(): Promise<TailorResponse> {
+  return new Promise((resolve) => {
+    setTimeout(() => {
+      resolve(SAMPLE_TAILOR_RESPONSE);
+    }, SAMPLE_DELAY_MS);
+  });
+}
+
+const SAMPLE_DELAY_MS = 600;

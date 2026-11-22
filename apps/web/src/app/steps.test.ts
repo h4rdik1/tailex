@@ -25,10 +25,15 @@ describe('stepsReducer', () => {
     expect(stepsReducer(INITIAL_STEPS, { type: 'go', step: 'export' })).toBe(INITIAL_STEPS);
   });
 
-  it('never lets you open the coming-soon Tailor step', () => {
+  // Phase 5 turned Tailor from "coming soon" into a real step, so this replaces the old rule
+  // "Tailor can never be opened" with: it opens like any step, once it has been unlocked.
+  it('lets you open Tailor once it is unlocked, and not before', () => {
+    const atReview = stepsReducer(INITIAL_STEPS, { type: 'advance', step: 'review' });
     const atExport = stepsReducer(INITIAL_STEPS, { type: 'advance', step: 'export' });
 
-    expect(canVisit(atExport, 'tailor')).toBe(false);
-    expect(stepsReducer(atExport, { type: 'go', step: 'tailor' }).current).toBe('export');
+    expect(canVisit(atReview, 'tailor')).toBe(false);
+    expect(stepsReducer(atReview, { type: 'go', step: 'tailor' }).current).toBe('review');
+    expect(canVisit(atExport, 'tailor')).toBe(true);
+    expect(stepsReducer(atExport, { type: 'go', step: 'tailor' }).current).toBe('tailor');
   });
 });

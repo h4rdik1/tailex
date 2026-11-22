@@ -1,5 +1,5 @@
 import { cn } from '../lib/cn.ts';
-import { canVisit, isComingSoon, STEPS, type StepId, type StepState } from './steps.ts';
+import { canVisit, STEPS, type StepId, type StepState } from './steps.ts';
 
 interface StepperProps {
   state: StepState;
@@ -37,7 +37,6 @@ export function Stepper({ state, onGo }: StepperProps) {
               >
                 <span className="text-emerald-600 dark:text-emerald-400">{index + 1}</span>{' '}
                 {step.label}
-                {isComingSoon(step.id) && <span className="ml-1 text-xs opacity-70">(v1.1)</span>}
               </button>
             </li>
           );

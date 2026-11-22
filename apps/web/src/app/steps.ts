@@ -3,7 +3,7 @@ export const STEPS = [
   { id: 'upload', label: 'Upload' },
   { id: 'review', label: 'Review' },
   { id: 'preview', label: 'Preview' },
-  { id: 'tailor', label: 'Tailor', comingSoon: true },
+  { id: 'tailor', label: 'Tailor' },
   { id: 'export', label: 'Export' },
 ] as const;
 
@@ -25,13 +25,9 @@ export function stepIndex(step: StepId): number {
   return STEPS.findIndex((s) => s.id === step);
 }
 
-export function isComingSoon(step: StepId): boolean {
-  return STEPS.some((s) => s.id === step && 'comingSoon' in s);
-}
-
 /** Can the user open this step from the stepper right now? */
 export function canVisit(state: StepState, step: StepId): boolean {
-  return !isComingSoon(step) && stepIndex(step) <= state.furthest;
+  return stepIndex(step) <= state.furthest;
 }
 
 export function stepsReducer(state: StepState, action: StepAction): StepState {

@@ -1,16 +1,20 @@
 import {
   ErrorResponseSchema,
   KeyTestResponseSchema,
+  KeywordsResponseSchema,
   LayoutSchema,
   LLM_HEADERS,
   ParseResponseSchema,
   RENDER_HEADERS,
+  TailorResponseSchema,
   type CompileErrorDetail,
   type ErrorCode,
+  type KeywordsResponse,
   type Layout,
   type ParseResponse,
   type PublicProvider,
   type ResumeData,
+  type TailorResponse,
 } from '@tailex/shared';
 import { ERROR_MESSAGES, type ClientErrorCode } from './error-messages.ts';
 
@@ -64,6 +68,10 @@ export interface ApiClient {
   testKey: () => Promise<void>;
   parse: (file: Blob) => Promise<ParseResponse>;
   render: (resume: ResumeData) => Promise<RenderedPdf>;
+  /** Matched / missing / extra skills. Deterministic on the server: never sends the key. */
+  keywords: (resume: ResumeData, jd: string) => Promise<KeywordsResponse>;
+  /** Bullet rewrites. The only tailoring call that sends the key. */
+  tailor: (resume: ResumeData, jd: string, confirmedSkills: string[]) => Promise<TailorResponse>;
 }
 
 export function createApiClient(keys: KeySource, fetchFn: typeof fetch = fetch): ApiClient {
@@ -107,6 +115,24 @@ export function createApiClient(keys: KeySource, fetchFn: typeof fetch = fetch):
         body: file,
       });
       return parseOrThrow(ParseResponseSchema, await response.json());
+    },
+
+    async keywords(resume, jd) {
+      const response = await send('/api/keywords', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' }, // no key: this is plain code on the server
+        body: JSON.stringify({ resume, jd }),
+      });
+      return parseOrThrow(KeywordsResponseSchema, await response.json());
+    },
+
+    async tailor(resume, jd, confirmedSkills) {
+      const response = await send('/api/tailor', {
+        method: 'POST',
+        headers: { ...keyHeaders(), 'content-type': 'application/json' },
+        body: JSON.stringify({ resume, jd, confirmedSkills }),
+      });
+      return parseOrThrow(TailorResponseSchema, await response.json());
     },
 
     async render(resume) {
