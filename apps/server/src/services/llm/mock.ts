@@ -32,6 +32,8 @@ export function createMockProvider(answers: readonly MockAnswer[] = [SAMPLE_PARS
 
 /** What a good parse of the fictional "fresher" resume looks like (LLM shape: no ids, no contact). */
 export const SAMPLE_PARSED: LlmParsedResume = {
+  headline: '',
+  summary: '',
   skills: [{ category: 'Languages', items: ['TypeScript', 'JavaScript', 'SQL'] }],
   experience: [],
   projects: [

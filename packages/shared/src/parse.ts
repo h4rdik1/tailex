@@ -5,12 +5,14 @@ const shortText = z.string().max(RESUME_LIMITS.shortText);
 const bulletText = z.string().max(RESUME_LIMITS.bullet);
 
 /**
- * Exactly what the LLM must return for prompt `parse-v1` (docs/SPEC.md §11): no ids, no contact.
+ * Exactly what the LLM must return for prompt `parse-v2` (docs/SPEC.md §11): no ids, no contact.
  * Our code validates it, then assigns ids and attaches the contact it redacted itself.
  * `.strict()` rejects extra keys, so the model can't smuggle in fields we didn't ask for.
  */
 export const LlmParsedResumeSchema = z
   .object({
+    headline: shortText,
+    summary: z.string().max(RESUME_LIMITS.summary),
     skills: z
       .array(
         z

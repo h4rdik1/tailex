@@ -6,6 +6,8 @@ import { z } from 'zod';
  */
 export const RESUME_LIMITS = {
   shortText: 120,
+  /** The optional "Summary" paragraph. Long enough for any real one, short enough for one page. */
+  summary: 700,
   bullet: 400,
   url: 200,
   links: 5,
@@ -87,6 +89,12 @@ export const EducationSchema = z.object({
 /** The full resume as the user reviews and edits it (docs/SPEC.md §4). */
 export const ResumeDataSchema = z.object({
   contact: ContactSchema,
+  /**
+   * Optional, "" when the resume has none, and then nothing is printed (docs/DECISIONS.md
+   * ADR-038). `.default('')` keeps older requests that don't send them valid.
+   */
+  headline: shortText.default(''),
+  summary: z.string().max(RESUME_LIMITS.summary).default(''),
   skills: z.array(SkillGroupSchema).max(RESUME_LIMITS.skillGroups),
   experience: z.array(ExperienceSchema).max(RESUME_LIMITS.experience),
   projects: z.array(ProjectSchema).max(RESUME_LIMITS.projects),

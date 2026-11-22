@@ -49,6 +49,8 @@ function walkStrings(
 
 const SECTION_LABELS: Record<string, string> = {
   contact: 'Contact',
+  headline: 'Headline',
+  summary: 'Summary',
   links: 'Link',
   skills: 'Skill group',
   items: 'Skill',

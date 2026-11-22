@@ -9,6 +9,24 @@ describe('resumeReducer', () => {
     expect(resumeReducer(EMPTY_RESUME, { type: 'replace', resume: start })).toBe(start);
   });
 
+  it('sets and clears the optional headline and summary', () => {
+    const withBoth = resumeReducer(
+      resumeReducer(start, { type: 'setHeadline', value: 'Master Tailor' }),
+      { type: 'setSummary', value: 'Skilled tailor.' },
+    );
+
+    expect(withBoth).toMatchObject({ headline: 'Master Tailor', summary: 'Skilled tailor.' });
+    expect(withBoth.experience).toBe(start.experience);
+
+    const cleared = resumeReducer(withBoth, { type: 'setSummary', value: '' });
+    expect(cleared.summary).toBe('');
+    expect(cleared.headline).toBe('Master Tailor');
+  });
+
+  it('an empty resume has no headline or summary', () => {
+    expect(EMPTY_RESUME).toMatchObject({ headline: '', summary: '' });
+  });
+
   it('edits a contact field without touching anything else', () => {
     const next = resumeReducer(start, { type: 'setContact', field: 'name', value: 'A. Test' });
 

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { FICTIONAL_RESUME, LAYOUT_LEVELS, type ResumeData } from '@tailex/shared';
+import { INJECTION_PAYLOADS } from './helpers/payloads.ts';
 import {
   layoutFor,
   REFERENCE_LEVEL,
@@ -72,6 +73,59 @@ describe('renderResumeTex: page setup', () => {
 
     expect(tex).toContain('\\typeout{TAILEX-FILL \\the\\pagetotal\\space\\the\\pagegoal}');
     expect(tex.split('\n')[0]).toBe('% tailex-layout: 9');
+  });
+});
+
+describe('renderResumeTex: optional summary and headline (ADR-038)', () => {
+  const withBoth = (): ResumeData => ({
+    ...structuredClone(FICTIONAL_RESUME),
+    headline: 'Master Tailor',
+    summary: 'Skilled tailor with 25 years of experience.',
+  });
+
+  it('prints a Summary section first when the resume has a summary', () => {
+    const tex = texFor(withBoth());
+    const order = [...tex.matchAll(/\\resumesection\{([^}]+)\}/g)].map((m) => m[1]);
+
+    expect(order).toEqual(['Summary', 'Technical Skills', 'Experience', 'Projects', 'Education']);
+    expect(tex).toContain('Skilled tailor with 25 years of experience.');
+  });
+
+  it('has no Summary section at all when there is none (empty or only spaces)', () => {
+    for (const summary of ['', '   \n  ']) {
+      const tex = texFor({ ...structuredClone(FICTIONAL_RESUME), summary });
+
+      expect(tex).not.toContain('{Summary}');
+    }
+  });
+
+  it('prints the headline between the name and the contact line, only when filled', () => {
+    const tex = texFor(withBoth());
+
+    expect(tex).toContain('\\itshape Master Tailor');
+    expect(tex.indexOf('Asha Testwala')).toBeLessThan(tex.indexOf('Master Tailor'));
+    expect(tex.indexOf('Master Tailor')).toBeLessThan(tex.indexOf('asha.testwala@example.com'));
+    expect(texFor()).not.toContain('\\itshape');
+  });
+
+  it('a resume without either produces exactly the same TeX as before they existed', () => {
+    const tex = texFor();
+
+    expect(tex).not.toContain('Summary');
+    expect(tex).not.toContain('\\itshape');
+  });
+
+  it('escapes injection payloads in both fields', () => {
+    for (const payload of INJECTION_PAYLOADS) {
+      const tex = texFor({
+        ...structuredClone(FICTIONAL_RESUME),
+        headline: payload,
+        summary: payload,
+      });
+
+      // A raw command would show up unescaped; escaped, it is printed as text (\textbackslash).
+      expect(tex).not.toMatch(/\\input\{\/etc\/passwd\}|\\write18\{|\\catcode`|\\def\\x/);
+    }
   });
 });
 

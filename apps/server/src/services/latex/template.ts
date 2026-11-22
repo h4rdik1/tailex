@@ -84,7 +84,8 @@ export function renderResumeTex(resume: ResumeData, options: TemplateOptions): R
   const safe: SafeText = (text) => escapeLatex(cleaner.clean(text));
 
   const body = [
-    renderHeader(resume.contact, safe),
+    renderHeader(resume.contact, resume.headline, safe),
+    renderSummary(resume.summary, safe),
     renderSkills(resume.skills, safe),
     renderSection('Experience', resume.experience, (entry) => renderExperience(entry, safe), safe),
     renderSection('Projects', resume.projects, (entry) => renderProject(entry, safe), safe),
@@ -149,7 +150,7 @@ function preamble(p: LayoutValues): string {
 \newenvironment{resumebullets}{\begin{list}{$\vcenter{\hbox{\tiny$\bullet$}}$}{\setlength{\leftmargin}{\entryindent}\setlength{\labelsep}{0.5em}\setlength{\topsep}{\bulletgap}\setlength{\partopsep}{0pt}\setlength{\parsep}{0pt}\setlength{\itemsep}{\bulletgap}}\itemfont}{\end{list}}`;
 }
 
-function renderHeader(contact: Contact, safe: SafeText): string {
+function renderHeader(contact: Contact, headline: string, safe: SafeText): string {
   const details = [contact.location, contact.phone, contact.email]
     .filter(isFilled)
     .map(safe)
@@ -157,7 +158,12 @@ function renderHeader(contact: Contact, safe: SafeText): string {
 
   const lines = [
     isFilled(contact.name) ? `{\\namefont\\scshape\\bfseries ${safe(contact.name)}\\par}` : '',
-    isFilled(contact.name) && details.length > 0 ? '\\vspace{\\afternamegap}' : '',
+    isFilled(contact.name) && (isFilled(headline) || details.length > 0)
+      ? '\\vspace{\\afternamegap}'
+      : '',
+    // The job title under the name, only when the resume has one.
+    isFilled(headline) ? `{\\itemfont\\itshape ${safe(headline)}\\par}` : '',
+    isFilled(headline) && details.length > 0 ? '\\vspace{\\afternamegap}' : '',
     details.length > 0 ? `{\\contactfont ${details.join(' \\textbar{} ')}\\par}` : '',
   ].filter(isFilled);
 
@@ -183,6 +189,17 @@ function renderSection<T>(
     `\\resumesection{${safe(title)}}`,
     '\\begin{resumeentries}',
     ...entries.map((entry) => `\\item[] ${renderEntry(entry)}`),
+    '\\end{resumeentries}',
+  ].join('\n');
+}
+
+/** The optional paragraph under the header. No summary in the resume means no section at all. */
+function renderSummary(summary: string, safe: SafeText): string {
+  if (!isFilled(summary)) return '';
+  return [
+    `\\resumesection{${safe('Summary')}}`,
+    '\\begin{resumeentries}',
+    `\\item[] {\\itemfont ${safe(summary.trim())}\\par}`,
     '\\end{resumeentries}',
   ].join('\n');
 }

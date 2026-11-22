@@ -6,6 +6,9 @@ import type { ResumeData } from '../resume.ts';
  * example.com / example.org are reserved for documentation, and the phone number is not real.
  */
 export const FICTIONAL_RESUME: ResumeData = {
+  // Empty on purpose: the sample has no summary, so every layout/fill test keeps its numbers.
+  headline: '',
+  summary: '',
   contact: {
     name: 'Asha Testwala',
     email: 'asha.testwala@example.com',

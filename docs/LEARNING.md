@@ -248,7 +248,7 @@ POST /api/parse   headers: x-llm-provider, x-llm-key   body: the raw PDF/DOCX by
   ├─ extract/zip-limits.ts           DOCX only: read the ZIP's table of contents, refuse bombs
   ├─ extract/extractor.ts            bytes → text: unpdf (PDF, ≤ 10 pages) or mammoth (DOCX)
   ├─ redact/redact-contact.ts        email/phone/links/handles/name → [EMAIL] [PHONE] [LINK] [NAME]
-  ├─ prompts/parse.ts                system prompt parse-v1 + "<resume_text>…</resume_text>"
+  ├─ prompts/parse.ts                system prompt parse-v2 + "<resume_text>…</resume_text>"
   ├─ llm/gemini.ts                   ONE call, JSON mode, temperature 0, key in a header
   ├─ shared LlmParsedResumeSchema    Zod validates; invalid → retry once → 502
   └─ parse/assemble-resume.ts        add ids (exp0-b1…), attach contact, restore placeholders
@@ -459,6 +459,36 @@ place. Real places start with a capital letter, so the shape check now requires 
   worse than an empty field the user fills in during review.
 - **How did you test link extraction without binary fixtures?** The Word test builds a real .docx
   in memory (a ZIP) with a hyperlink; the PDF tests use our own LaTeX pipeline to make PDFs.
+
+### The optional Summary and headline
+
+**The gap you found:** the original had a "PROFESSIONAL SUMMARY" and a title under the name; the
+generated PDF had neither. Not because extraction failed (the text was in "what's sent"), but
+because our data model had no field for them, so the AI had nowhere to put them and nothing said so.
+
+**The fix in three layers:** (1) two optional fields in the shared schema; (2) one new prompt rule
+so the AI fills them only when they exist; (3) the PDF template prints a Summary section and a
+headline **only when they are not empty**, so a resume without a summary is unchanged.
+
+**"Empty string means absent":** instead of a separate yes/no flag, `""` carries the meaning. It
+means one less thing that can disagree with the text, and the template already skips empty sections.
+
+**`.default('')` explained:** Zod fills in `''` when a request doesn't send the key, so old
+clients keep working. The type you read in code is the filled-in one, so TypeScript still forces
+every place that builds a resume to say whether it has a summary.
+
+**Prompts are versioned:** the prompt changed, so it became `parse-v2`. The spec and the code must
+match character for character, and a test compares them. Changing one without the other fails CI.
+
+### Interview Q&A (summary and headline)
+
+- **How do you add a field without breaking existing data?** Make it optional with a safe default
+  (`.default('')`), so old requests still validate, and require it only in the new AI schema.
+- **How do you stop the AI from inventing a summary?** The prompt says never to, and rule 1 says
+  never to add or infer. But prompts are not security: the user sees and edits the result in
+  Review, and nothing is printed that they did not see.
+- **Why must the prompt in code match the spec?** The spec is the reviewed source of truth for
+  what we send to a third party. A test makes a silent edit impossible.
 
 ---
 

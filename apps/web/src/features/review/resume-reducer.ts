@@ -14,6 +14,8 @@ export type BulletSection = 'experience' | 'projects';
 export type ResumeAction =
   | { type: 'replace'; resume: ResumeData }
   | { type: 'setContact'; field: ContactField; value: string }
+  | { type: 'setHeadline'; value: string }
+  | { type: 'setSummary'; value: string }
   | { type: 'setLink'; id: string; field: 'label' | 'url'; value: string }
   | { type: 'addLink'; id: string }
   | { type: 'setSkillGroup'; id: string; category?: string; items?: string[] }
@@ -30,6 +32,8 @@ export type ResumeAction =
 
 export const EMPTY_RESUME: ResumeData = {
   contact: { name: '', email: '', phone: '', location: '', links: [] },
+  headline: '',
+  summary: '',
   skills: [],
   experience: [],
   projects: [],
@@ -48,6 +52,12 @@ export function resumeReducer(state: ResumeData, action: ResumeAction): ResumeDa
 
     case 'setContact':
       return { ...state, contact: { ...state.contact, [action.field]: action.value } };
+
+    case 'setHeadline':
+      return { ...state, headline: action.value };
+
+    case 'setSummary':
+      return { ...state, summary: action.value };
 
     case 'setLink':
       return {

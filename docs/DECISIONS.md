@@ -89,7 +89,7 @@ Short ADRs. Format: **Context · Options · Choice · Tradeoffs.** New decisions
 
 - **Context:** Each feature makes a single structured LLM call.
 - **Choice:** Versioned constants in `apps/server/src/prompts/`, stored verbatim from SPEC.md, JSON mode, temperature 0–0.3, no tools, no agent loops.
-  - `parse-v1`: **extract, don't improve.** Converts redacted text into the schema, keeps placeholders, and treats `<resume_text>` as data.
+  - `parse-v1` (now `parse-v2`, ADR-038): **extract, don't improve.** Converts redacted text into the schema, keeps placeholders, and treats `<resume_text>` as data.
   - `tailor-v1`: **rephrase with the JD's terms only where the bullet already supports them.** Never adds facts; returns `{id, suggested, reason}` and treats `<jd>`/`<bullets>` as data.
 - **Tradeoffs:** Prompts reduce bad output but are **not** a security control. Zod and the truth guard are. Version strings allow comparing fixture outputs when prompts change.
 
@@ -255,6 +255,16 @@ Short ADRs. Format: **Context · Options · Choice · Tradeoffs.** New decisions
 - **Choice (location):** `guessLocation` runs on the **redacted** text. In the first eight lines (stopping at a section heading, skipping a CONTACT heading) the placeholders and `| · • – —` cut each line into pieces; the first piece that looks like a place (capitalised comma-separated parts, optional postcode, not a link label like "LinkedIn", at most 60 characters) is the location. A piece on a line of its own counts only when it has a comma, so an unrecognised name is not mistaken for a city. A city lower on the page (a job's location) is never reached.
 - **Tradeoffs:** Heuristic, like the rest of redaction: when unsure it returns an empty string and the user fills it in. A label with no page behind it (the word "GitHub" with no link) stays text, because we cannot invent an address. Location is not replaced by a placeholder in the text sent to the LLM (it is not in the list of redacted items in CLAUDE.md and the model needs jobs' cities as context).
 - **Found by trying a designed two-column template:** the name was printed over two lines (`Leonard` / `Hamilton`), so the one-line name rule found no name and it was NOT redacted, a privacy leak. `guessName` now also joins two single capitalised word lines (never headings like EDUCATION or CONTACT), and redaction matches the name across a line break. The location sat under a `CONTACT` heading seven lines down: the header now allows up to 8 lines, a `CONTACT` heading is skipped instead of ending the header, and any real section heading still ends it.
+
+## ADR-038 — Optional headline and summary; prompt `parse-v2`
+
+- **Context:** A real two-column resume had a "PROFESSIONAL SUMMARY" paragraph and a job title under the name. Our data model had no place for either, so the AI dropped them silently, and a short resume lost exactly the content that would have filled its page.
+- **Choice:** Two optional strings on `ResumeData`: `headline` (one line, ≤ 120) and `summary` (a paragraph, ≤ 700). An empty string means "not there": the PDF prints no headline and **no Summary section at all** (the template's existing `isFilled` pattern, so no flag is needed). The review form always shows an empty Summary box so a user can add one by hand; it is simply not printed while empty.
+- **Prompt `parse-v1` → `parse-v2`:** one new rule (6): `headline` is the job title directly under the name, `summary` is the paragraph under a heading such as Summary, Profile or About, copied as written; "If either is missing use ''. Never write one yourself." The old rules 6 and 7 became 7 and 8, and the schema gained the two keys. Rules 1 and 3 ("never add, infer, guess or improve", "if a field is missing use ''") are unchanged. SPEC.md §11 and `prompts/parse.ts` change together; the verbatim test enforces it. Shown to and approved by the owner before use.
+- **Compatibility:** `ResumeDataSchema` uses `.default('')`, so a request from before these fields existed still validates. The LLM schema (`LlmParsedResumeSchema`, strict) requires both keys, so an answer in the old shape is rejected and retried like any other invalid output.
+- **Safety:** Both go through `safe()`/`escapeLatex` like every other user string; tests print the injection payloads in the summary through real pdflatex. Placeholders such as `[EMAIL]` in a summary are put back by the same restorer as bullets.
+- **Not done:** Writing a summary for people who have none (the prompt forbids it), and tailoring the summary to a job description (Phase 5 can reuse the field).
+- **Layout side effect:** a summary adds lines, so the auto-fit picks a slightly smaller size when needed; a resume without one produces exactly the same TeX as before. `FICTIONAL_RESUME` keeps both empty so the fill/size tests keep their numbers.
 
 ## Pending
 

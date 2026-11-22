@@ -23,14 +23,20 @@ function promptFromSpec(heading: string): string {
 }
 
 describe('runtime prompts', () => {
-  it('parse-v1 is stored verbatim from the spec', () => {
-    expect(PARSE_PROMPT_VERSION).toBe('parse-v1');
+  it('parse-v2 is stored verbatim from the spec', () => {
+    expect(PARSE_PROMPT_VERSION).toBe('parse-v2');
     expect(PARSE_SYSTEM_PROMPT).toBe(promptFromSpec('`PARSE_SYSTEM_PROMPT`'));
   });
 
   it('tailor-v1 is stored verbatim from the spec', () => {
     expect(TAILOR_PROMPT_VERSION).toBe('tailor-v1');
     expect(TAILOR_SYSTEM_PROMPT).toBe(promptFromSpec('`TAILOR_SYSTEM_PROMPT`'));
+  });
+
+  it('parse-v2 asks for headline and summary and forbids writing one', () => {
+    expect(PARSE_SYSTEM_PROMPT).toContain('"headline": string, "summary": string');
+    expect(PARSE_SYSTEM_PROMPT).toContain('Never write one yourself.');
+    expect(PARSE_SYSTEM_PROMPT).toContain('Never add, infer, guess or improve anything.');
   });
 
   it('wraps resume text in data tags', () => {
@@ -76,6 +82,27 @@ describe('assembleResume', () => {
     expect(resume.projects[0]?.bullets[0]?.text).toBe(
       'Code at github.com/asha-example, mail asha.testwala@example.com',
     );
+  });
+
+  it('copies the headline and summary, putting contact values back into the summary', () => {
+    const contact = { ...FICTIONAL_RESUME.contact, links: [] };
+    const parsed = {
+      ...SAMPLE_PARSED,
+      headline: 'Master Tailor',
+      summary: 'Tailor for 25 years. Write to [EMAIL].',
+    };
+
+    const resume = assembleResume(parsed, contact);
+
+    expect(resume.headline).toBe('Master Tailor');
+    expect(resume.summary).toBe('Tailor for 25 years. Write to asha.testwala@example.com.');
+    expect(ResumeDataSchema.safeParse(resume).success).toBe(true);
+  });
+
+  it('keeps both empty when the resume has neither', () => {
+    const resume = assembleResume(SAMPLE_PARSED, FICTIONAL_RESUME.contact);
+
+    expect(resume).toMatchObject({ headline: '', summary: '' });
   });
 
   it('leaves [LINK] visible when several links make it ambiguous', () => {

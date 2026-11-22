@@ -107,6 +107,31 @@ describe('POST /api/parse: happy path', () => {
   });
 });
 
+describe('POST /api/parse: optional headline and summary', () => {
+  it('returns them when the AI found them, and empty strings when it did not', async () => {
+    const withBoth = { ...SAMPLE_PARSED, headline: 'Master Tailor', summary: 'Tailor, 25 years.' };
+    const { app } = setup([withBoth]);
+
+    const first = ParseResponseSchema.parse((await upload(app)).body);
+    const { app: plain } = setup([SAMPLE_PARSED]);
+    const second = ParseResponseSchema.parse((await upload(plain)).body);
+
+    expect(first.resume).toMatchObject({ headline: 'Master Tailor', summary: 'Tailor, 25 years.' });
+    expect(second.resume).toMatchObject({ headline: '', summary: '' });
+  });
+
+  it('retries once when the AI leaves the new fields out (older prompt habits), then errors', async () => {
+    // An answer in the old shape: the two new keys are missing, so Zod must reject it.
+    const missing = { skills: [], experience: [], projects: [], education: [] };
+    const { app, mock } = setup([missing, missing]);
+
+    const res = await upload(app);
+
+    expect(res.status).toBe(502);
+    expect(mock.calls).toHaveLength(2);
+  });
+});
+
 describe('POST /api/parse: contact details hidden inside the file', () => {
   const text =
     'Asha Testwala\nPune, India | 9000000000 | asha@example.com | LinkedIn | GitHub\n\nExperience\nEngineer';

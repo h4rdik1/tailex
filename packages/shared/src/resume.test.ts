@@ -8,6 +8,56 @@ describe('ResumeDataSchema', () => {
     expect(ResumeDataSchema.safeParse(FICTIONAL_RESUME).success).toBe(true);
   });
 
+  describe('optional headline and summary (ADR-038)', () => {
+    it('defaults both to an empty string when a request does not send them', () => {
+      // A request from before these fields existed: only the other keys are present.
+      const oldRequest = {
+        contact: FICTIONAL_RESUME.contact,
+        skills: FICTIONAL_RESUME.skills,
+        experience: FICTIONAL_RESUME.experience,
+        projects: FICTIONAL_RESUME.projects,
+        education: FICTIONAL_RESUME.education,
+      };
+
+      const parsed = ResumeDataSchema.parse(oldRequest);
+
+      expect(parsed.headline).toBe('');
+      expect(parsed.summary).toBe('');
+    });
+
+    it('keeps them when they are sent', () => {
+      const parsed = ResumeDataSchema.parse({
+        ...FICTIONAL_RESUME,
+        headline: 'Master Tailor',
+        summary: 'Skilled tailor with 25 years of experience.',
+      });
+
+      expect(parsed.headline).toBe('Master Tailor');
+      expect(parsed.summary).toContain('25 years');
+    });
+
+    it('rejects a summary or headline over its limit, and accepts exactly the limit', () => {
+      const long = (length: number) => 'x'.repeat(length);
+
+      expect(
+        ResumeDataSchema.safeParse({ ...FICTIONAL_RESUME, summary: long(RESUME_LIMITS.summary) })
+          .success,
+      ).toBe(true);
+      expect(
+        ResumeDataSchema.safeParse({
+          ...FICTIONAL_RESUME,
+          summary: long(RESUME_LIMITS.summary + 1),
+        }).success,
+      ).toBe(false);
+      expect(
+        ResumeDataSchema.safeParse({
+          ...FICTIONAL_RESUME,
+          headline: long(RESUME_LIMITS.shortText + 1),
+        }).success,
+      ).toBe(false);
+    });
+  });
+
   it('rejects a bullet over the length limit', () => {
     const tooLong = 'x'.repeat(RESUME_LIMITS.bullet + 1);
     const resume = structuredClone(FICTIONAL_RESUME);

@@ -54,7 +54,7 @@ sequenceDiagram
   S->>S: rate limit · size ≤ 1 MB · magic bytes
   S->>X: buffer (memory only)
   X-->>S: text with [NAME] [EMAIL] [PHONE] [LINK] + contact
-  S->>P: PARSE prompt parse-v1 + <resume_text> (JSON mode, temp ≤ 0.3)
+  S->>P: PARSE prompt parse-v2 + <resume_text> (JSON mode, temp ≤ 0.3)
   P-->>S: JSON
   S->>S: Zod validate (retry once on invalid) · assign stable ids · drop key
   S-->>U: { resume, redactedPreview }
@@ -107,7 +107,7 @@ cvfit/
 │        │  ├─ latex/           # escapeLatex (hand-written), template, compile sandbox, log parser
 │        │  ├─ keywords/        # engine + skills.json
 │        │  └─ truth-guard/     # hand-written
-│        └─ prompts/            # parse.ts (parse-v1), tailor.ts (tailor-v1)
+│        └─ prompts/            # parse.ts (parse-v2), tailor.ts (tailor-v1)
 └─ packages/
    └─ shared/                   # Zod schemas + inferred types + error codes
 ```

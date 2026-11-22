@@ -12,6 +12,8 @@ export function assembleResume(parsed: LlmParsedResume, contact: Contact): Resum
 
   return {
     contact,
+    headline: restore(parsed.headline),
+    summary: restore(parsed.summary),
     skills: parsed.skills.map((group, i) => ({
       id: `skills${String(i)}`,
       category: restore(group.category),

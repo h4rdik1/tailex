@@ -102,6 +102,34 @@ describe.skipIf(!hasPdflatex)('resume template → PDF (needs escapeLatex)', () 
     expect(result.pdf.toString('latin1')).toMatch(/\/URI\s*\(https:/);
   });
 
+  it('prints a filled summary and headline, and nothing extra when they are empty', async () => {
+    const filled = {
+      ...structuredClone(FICTIONAL_RESUME),
+      headline: 'Master Tailor',
+      summary: 'Skilled tailor with 25 years of experience in bespoke garments.',
+    };
+
+    const text = extractPdfText((await renderPdf(filled)).result.pdf);
+    const plain = extractPdfText((await renderPdf(FICTIONAL_RESUME)).result.pdf);
+
+    expect(text).toContain(squash('Master Tailor'));
+    expect(text).toContain(squash('Skilled tailor with 25 years of experience'));
+    expect(text.indexOf(squash('Summary'))).toBeLessThan(text.indexOf(squash('Technical Skills')));
+    expect(plain).not.toContain('Summary');
+  });
+
+  it('prints injection payloads in the summary as literal text', async () => {
+    const resume = {
+      ...structuredClone(FICTIONAL_RESUME),
+      summary: INJECTION_PAYLOADS.join(' '),
+    };
+
+    const { result } = await renderPdf(resume);
+
+    expect(extractPdfText(result.pdf)).toContain(squash(INJECTION_PAYLOADS[0]));
+    expect(result.log).not.toContain('(/etc/passwd');
+  });
+
   it('measures how full the page is', async () => {
     const { result } = await renderPdf(FICTIONAL_RESUME);
     const fill = parsePageFill(result.log, FILL_MARKER);

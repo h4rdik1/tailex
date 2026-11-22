@@ -57,6 +57,7 @@ Built on branch `phase-3` while the owner was away (not merged to `main`).
 - [x] Sample mode → **v1**
 - [x] Template matched to the reference design (US Letter, Skills first) + one design auto-scaled to fill one page (ADR-036)
 - [x] Contact block: hidden PDF/Word link targets and location recovered (ADR-037)
+- [x] Optional headline and Summary section, prompt parse-v2 (ADR-038)
 
 ## Phase 5 — Tailoring (v1.1)
 

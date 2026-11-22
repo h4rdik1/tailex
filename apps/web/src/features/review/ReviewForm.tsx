@@ -1,5 +1,6 @@
 import type { Dispatch } from 'react';
 import type { ResumeData } from '@tailex/shared';
+import { Hint } from '../../components/ui/fields.tsx';
 import { newId, type BulletSection, type ResumeAction } from './resume-reducer.ts';
 import { BulletList, CommaListField, EntryBox, SectionCard, TextField } from './form-parts.tsx';
 
@@ -70,6 +71,14 @@ export function ReviewForm({ resume, dispatch }: ReviewFormProps) {
               dispatch({ type: 'setContact', field: 'location', value });
             }}
           />
+          <TextField
+            label="Headline (job title under your name, optional)"
+            className="flex flex-col gap-1.5 sm:col-span-2"
+            value={resume.headline}
+            onChange={(value) => {
+              dispatch({ type: 'setHeadline', value });
+            }}
+          />
         </div>
         {contact.links.map((link, index) => (
           <EntryBox
@@ -97,6 +106,18 @@ export function ReviewForm({ resume, dispatch }: ReviewFormProps) {
             </div>
           </EntryBox>
         ))}
+      </SectionCard>
+
+      <SectionCard title="Summary (optional)">
+        <TextField
+          label="Summary paragraph"
+          multiline
+          value={resume.summary}
+          onChange={(value) => {
+            dispatch({ type: 'setSummary', value });
+          }}
+        />
+        <Hint>Leave it empty and the PDF has no Summary section.</Hint>
       </SectionCard>
 
       <SectionCard
